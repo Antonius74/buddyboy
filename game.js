@@ -1151,8 +1151,12 @@
 
   function startGame() {
     applyProfileFromSetup();
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     resetGame();
     gameState = "playing";
+    document.body.classList.add("playing-mode");
     overlay.classList.remove("visible");
     unlockAudioFromGesture();
     playMusic();
@@ -1177,6 +1181,7 @@
 
   function finishGame(win) {
     gameState = win ? "won" : "lost";
+    document.body.classList.remove("playing-mode");
 
     if (win) {
       playSfxWinJingle();

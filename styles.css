@@ -17,6 +17,9 @@
 
 * {
   box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 html,
@@ -48,6 +51,8 @@ textarea,
 select {
   user-select: text;
   -webkit-user-select: text;
+  -webkit-touch-callout: default;
+  touch-action: auto;
 }
 
 .app-shell {
@@ -55,6 +60,21 @@ select {
   width: 100%;
   height: var(--app-height);
   min-height: 100svh;
+}
+
+body.playing-mode,
+body.playing-mode .app-shell,
+body.playing-mode #game,
+body.playing-mode .hud,
+body.playing-mode .hud *,
+body.playing-mode .music-toggle,
+body.playing-mode .weapon-toggle,
+body.playing-mode .touch-ui,
+body.playing-mode .touch-ui * {
+  touch-action: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
 }
 
 #game {

@@ -7,7 +7,40 @@
       content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <title>NEXI IT - 8 Ore di Sopravvivenza</title>
-    <link rel="stylesheet" href="styles.css?v=20260316d" />
+    <link rel="stylesheet" href="styles.css?v=20260316f" />
+    <script>
+      (() => {
+        let lastTouchEnd = 0;
+        const isEditableTarget = (target) =>
+          target instanceof Element &&
+          target.closest("input, textarea, select, [contenteditable='true']");
+
+        document.addEventListener(
+          "touchend",
+          (event) => {
+            if (isEditableTarget(event.target)) {
+              lastTouchEnd = Date.now();
+              return;
+            }
+
+            const now = Date.now();
+            if (now - lastTouchEnd < 380 && event.cancelable) {
+              event.preventDefault();
+            }
+            lastTouchEnd = now;
+          },
+          { passive: false, capture: true }
+        );
+
+        const blockGesture = (event) => {
+          if (isEditableTarget(event.target)) return;
+          if (event.cancelable) event.preventDefault();
+        };
+        document.addEventListener("gesturestart", blockGesture, { passive: false, capture: true });
+        document.addEventListener("gesturechange", blockGesture, { passive: false, capture: true });
+        document.addEventListener("gestureend", blockGesture, { passive: false, capture: true });
+      })();
+    </script>
   </head>
   <body>
     <main class="app-shell">
@@ -90,6 +123,6 @@
       </section>
     </main>
 
-    <script src="game.js?v=20260316d"></script>
+    <script src="game.js?v=20260316f"></script>
   </body>
 </html>
