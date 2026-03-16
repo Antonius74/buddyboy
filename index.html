@@ -29,6 +29,7 @@
       </section>
 
       <button id="music-toggle" class="music-toggle" type="button">MUSICA: OFF</button>
+      <button id="weapon-toggle" class="weapon-toggle" type="button">ARMA: MAIL</button>
 
       <section id="state-overlay" class="state-overlay visible">
         <div class="panel">
@@ -52,9 +53,26 @@
               <button id="gender-male-btn" class="gender-btn active" data-gender="male" type="button">Uomo</button>
               <button id="gender-female-btn" class="gender-btn" data-gender="female" type="button">Donna</button>
             </div>
+
+            <div class="enemy-rename-wrap">
+              <p class="enemy-rename-title">Nomi avversari (modificabili)</p>
+              <div class="enemy-grid">
+                <label for="enemy-boss-input">Capo</label>
+                <input id="enemy-boss-input" type="text" maxlength="24" value="CAPO" />
+
+                <label for="enemy-commercial-input">Commerciali</label>
+                <input id="enemy-commercial-input" type="text" maxlength="24" value="COMMERCIALI" />
+
+                <label for="enemy-client-input">Clienti</label>
+                <input id="enemy-client-input" type="text" maxlength="24" value="CLIENTI" />
+
+                <label for="enemy-colleague-input">Collega</label>
+                <input id="enemy-colleague-input" type="text" maxlength="24" value="COLLEGA" />
+              </div>
+            </div>
           </div>
           <p class="controls">
-            A/D o frecce: muovi · W/Freccia su: salta · Spazio/Clic: spara · Q: cambia colpo · Salta su collega/capo per eliminarli · Shift: scatto
+            Frecce: muovi/salta · Spazio/Clic: spara · Pulsante ARMA: cambia colpo · Salta su collega/capo per eliminarli · Shift: scatto
           </p>
           <button id="start-btn" type="button">Inizia il turno</button>
         </div>

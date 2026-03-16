@@ -16,6 +16,12 @@
   const nameInputEl = document.getElementById("player-name-input");
   const genderMaleBtn = document.getElementById("gender-male-btn");
   const genderFemaleBtn = document.getElementById("gender-female-btn");
+  const enemyLabelInputs = {
+    boss: document.getElementById("enemy-boss-input"),
+    commercial: document.getElementById("enemy-commercial-input"),
+    client: document.getElementById("enemy-client-input"),
+    colleague: document.getElementById("enemy-colleague-input"),
+  };
 
   const touchUI = document.getElementById("touch-ui");
   const touchPad = document.getElementById("touch-pad");
@@ -23,6 +29,7 @@
   const touchAttack = document.getElementById("touch-attack");
   const touchJump = document.getElementById("touch-jump");
   const musicToggleBtn = document.getElementById("music-toggle");
+  const weaponToggleBtn = document.getElementById("weapon-toggle");
 
   const START_HOUR = 9;
   const SHIFT_HOURS = 8;
@@ -81,6 +88,10 @@
     budget: { w: 64, h: 56, speed: 92, hp: 3, points: 300, label: "BUDGET" },
     warroom: { w: 76, h: 70, speed: 0, hp: 2, points: 260, label: "WAR ROOM", hazard: true },
   };
+  const enemyLabelProfile = {};
+  for (const type in ENEMY_RULES) {
+    enemyLabelProfile[type] = ENEMY_RULES[type].label;
+  }
 
   const PROJECTILE_STYLES = {
     packet: { w: 18, h: 10, ttl: 4.2, color: "#87f4ff", gravity: 0 },
@@ -105,11 +116,11 @@
       feminine: false,
     },
     female: {
-      skin: "#ffd8c5",
-      hair: "#40203c",
-      torso: "#ff6ea4",
-      pants: "#4d4b85",
-      accent: "#ffd4ea",
+      skin: "#ffdcca",
+      hair: "#6c3d2d",
+      torso: "#ff74b0",
+      pants: "#5a4f93",
+      accent: "#ffd3ea",
       hairLong: true,
       feminine: true,
     },
@@ -137,6 +148,7 @@
   let lastFrame = performance.now();
 
   const keys = new Set();
+  const HELD_INPUT_CODES = new Set(["ArrowLeft", "ArrowRight", "ShiftLeft", "ShiftRight"]);
   let attackQueued = false;
   let jumpQueued = false;
 
@@ -193,7 +205,7 @@
       facing: 1,
       walkSpeed: 210,
       runSpeed: 300,
-      jumpPower: 780,
+      jumpPower: 840,
       energy: MAX_ENERGY,
       invuln: 0,
       attackCooldown: 0,
@@ -209,6 +221,14 @@
       .replace(/[^A-Za-z0-9À-ÿ _.-]/g, "")
       .trim();
     return cleaned.slice(0, 18) || fallback;
+  }
+
+  function sanitizeEnemyLabel(raw, fallback) {
+    const cleaned = String(raw || "")
+      .replace(/\s+/g, " ")
+      .replace(/[^A-Za-z0-9À-ÿ _.+\-']/g, "")
+      .trim();
+    return cleaned.slice(0, 24) || fallback;
   }
 
   function getPlayerLook() {
@@ -232,7 +252,29 @@
       playerProfile.name = sanitizePlayerName(nameInputEl.value);
       nameInputEl.value = playerProfile.name;
     }
+    applyEnemyLabelsFromSetup();
     refreshGenderButtons();
+  }
+
+  function applyEnemyLabelsFromSetup() {
+    for (const type in enemyLabelInputs) {
+      const inputEl = enemyLabelInputs[type];
+      const fallback = ENEMY_RULES[type]?.label || type.toUpperCase();
+
+      if (!inputEl) {
+        enemyLabelProfile[type] = sanitizeEnemyLabel(enemyLabelProfile[type], fallback);
+        continue;
+      }
+
+      const finalLabel = sanitizeEnemyLabel(inputEl.value, fallback);
+      enemyLabelProfile[type] = finalLabel;
+      inputEl.value = finalLabel;
+    }
+  }
+
+  function getEnemyLabel(type) {
+    const fallback = ENEMY_RULES[type]?.label || type.toUpperCase();
+    return sanitizeEnemyLabel(enemyLabelProfile[type], fallback);
   }
 
   function drawPlayerPortrait() {
@@ -280,21 +322,34 @@
 
     c.fillStyle = look.hair;
     if (feminine) {
+      // Top hair + fringe.
       c.beginPath();
       c.arc(headX - 1, headY - 6, 14.5, Math.PI * 1.02, Math.PI * 2.02);
       c.fill();
-      c.fillRect(headX - 14, headY + 1, 8, 15);
-      c.fillRect(headX + 6, headY + 2, 7, 15);
       c.beginPath();
-      c.ellipse(headX + 11, headY + 6, 4.5, 8, -0.25, 0, Math.PI * 2);
+      c.moveTo(headX - 11, headY - 4);
+      c.quadraticCurveTo(headX - 2, headY - 12, headX + 8, headY - 4);
+      c.lineTo(headX + 8, headY - 1);
+      c.quadraticCurveTo(headX - 1, headY - 7, headX - 11, headY - 1);
+      c.closePath();
       c.fill();
+
+      // Long side hair to make female silhouette clear.
+      c.fillRect(headX - 14, headY + 1, 8, 16);
+      c.fillRect(headX + 6, headY + 1, 7, 16);
+      c.beginPath();
+      c.ellipse(headX - 11, headY + 14, 4.2, 5.8, 0.2, 0, Math.PI * 2);
+      c.ellipse(headX + 10, headY + 14, 4.6, 6, -0.2, 0, Math.PI * 2);
+      c.fill();
+
+      // Small hair clip.
+      c.fillStyle = "#ffd7ef";
+      c.fillRect(headX + 3, headY - 7, 5, 2.6);
+      c.fillStyle = look.hair;
     } else {
       c.beginPath();
       c.arc(headX - 1, headY - 5, 13.5, Math.PI * 1.02, Math.PI * 2.04);
       c.fill();
-      if (look.hairLong) {
-        c.fillRect(headX - 12, headY + 2, 6, 11);
-      }
     }
 
     const eyeY = headY - 3.4;
@@ -308,8 +363,8 @@
     c.fillRect(headX - 7.3, eyeY - 0.9, 0.9, 0.9);
     c.fillRect(headX + 6.3, eyeY - 0.9, 0.9, 0.9);
 
-    c.strokeStyle = "#263342";
-    c.lineWidth = feminine ? 2 : 1.5;
+    c.strokeStyle = feminine ? "#4b2f3f" : "#263342";
+    c.lineWidth = feminine ? 1.8 : 1.5;
     c.beginPath();
     c.moveTo(headX - 9.2, eyeY - 2.7);
     c.quadraticCurveTo(headX - 6.9, eyeY - (feminine ? 4.2 : 3.4), headX - 4.4, eyeY - 2.7);
@@ -318,38 +373,51 @@
     c.stroke();
 
     if (feminine) {
-      c.strokeStyle = "#32273e";
-      c.lineWidth = 1.2;
+      c.strokeStyle = "#5b3c51";
+      c.lineWidth = 1.1;
       c.beginPath();
       c.moveTo(headX - 4.6, eyeY - 2.8);
       c.lineTo(headX - 3.3, eyeY - 3.7);
       c.moveTo(headX + 10.1, eyeY - 2.8);
       c.lineTo(headX + 11.2, eyeY - 3.7);
       c.stroke();
+
+      // Earrings.
+      c.fillStyle = "#ffd7c0";
+      c.beginPath();
+      c.arc(headX - 13.2, headY + 6, 1.1, 0, Math.PI * 2);
+      c.arc(headX + 13.2, headY + 6, 1.1, 0, Math.PI * 2);
+      c.fill();
     }
 
-    c.strokeStyle = "rgba(110, 82, 60, 0.45)";
-    c.lineWidth = 1.3;
+    c.strokeStyle = "rgba(110, 82, 60, 0.35)";
+    c.lineWidth = 1.1;
     c.beginPath();
-    c.moveTo(headX + 0.8, headY + 1.6);
-    c.lineTo(headX + 2.4, headY + 4.2);
+    c.moveTo(headX + 0.7, headY + 1.8);
+    c.lineTo(headX + 2, headY + 3.9);
     c.stroke();
 
     const mouthY = headY + 8.2;
     const smileLift = 0.8 + smile * 6.2 + pulse * 0.6;
-    c.strokeStyle = "#602e24";
-    c.lineWidth = 2.2;
-    c.beginPath();
-    c.moveTo(headX - 8, mouthY);
-    c.quadraticCurveTo(headX, mouthY - smileLift, headX + 8, mouthY);
-    c.stroke();
-
     if (feminine) {
-      c.strokeStyle = `rgba(184, 74, 104, ${0.55 + smile * 0.25})`;
-      c.lineWidth = 1.2;
+      // Soft lips and smile for female portrait.
+      c.strokeStyle = `rgba(192, 68, 108, ${0.62 + smile * 0.24})`;
+      c.lineWidth = 2;
       c.beginPath();
-      c.moveTo(headX - 5.7, mouthY - 0.1);
-      c.quadraticCurveTo(headX, mouthY - smileLift * 0.62 - 0.5, headX + 5.7, mouthY - 0.1);
+      c.moveTo(headX - 6.4, mouthY + 0.1);
+      c.quadraticCurveTo(headX, mouthY - smileLift * 0.56, headX + 6.4, mouthY + 0.1);
+      c.stroke();
+
+      c.fillStyle = `rgba(235, 115, 150, ${0.28 + smile * 0.24})`;
+      c.beginPath();
+      c.ellipse(headX, mouthY + 0.5, 4.7, 1.5, 0, 0, Math.PI * 2);
+      c.fill();
+    } else {
+      c.strokeStyle = "#602e24";
+      c.lineWidth = 2.2;
+      c.beginPath();
+      c.moveTo(headX - 8, mouthY);
+      c.quadraticCurveTo(headX, mouthY - smileLift, headX + 8, mouthY);
       c.stroke();
     }
 
@@ -365,12 +433,6 @@
     c.beginPath();
     c.arc(w - 10, 10, 2 + smile * 2.2 + pulse * 0.5, 0, Math.PI * 2);
     c.fill();
-
-    c.fillStyle = "rgba(255, 255, 255, 0.92)";
-    c.font = "700 9px Trebuchet MS, sans-serif";
-    c.textAlign = "right";
-    c.textBaseline = "bottom";
-    c.fillText(playerProfile.name.slice(0, 1).toUpperCase(), w - 5, h - 4);
   }
 
   function updateMusicButton() {
@@ -378,6 +440,12 @@
 
     const label = musicState.enabled ? "MUSICA: ON" : "MUSICA: OFF";
     musicToggleBtn.textContent = label;
+  }
+
+  function updateWeaponButton() {
+    if (!weaponToggleBtn) return;
+    const mode = PLAYER_FIRE_MODES[playerFireMode];
+    weaponToggleBtn.textContent = `ARMA: ${mode?.label || "MAIL"}`;
   }
 
   function initMusicSystem() {
@@ -670,8 +738,8 @@
       }
 
       if (kind === "locker") {
-        const w = 78 + Math.random() * 26;
-        const h = 88 + Math.random() * 28;
+        const w = 74 + Math.random() * 22;
+        const h = 70 + Math.random() * 14;
         return { x, y: groundY - h, w, h, kind, solid: true };
       }
 
@@ -706,9 +774,10 @@
         if (Math.random() < 0.22) {
           const catW = Math.max(90, block.w * (0.75 + Math.random() * 0.58));
           const catX = block.x + Math.max(0, (block.w - catW) * 0.5);
+          const clearance = 118 + Math.random() * 46;
           platforms.push({
             x: catX,
-            y: block.y - 58 - Math.random() * 34,
+            y: block.y - clearance,
             w: catW,
             h: 20,
             kind: "catwalk",
@@ -794,7 +863,7 @@
     jumpQueued = false;
 
     camera.x = 0;
-    camera.y = 0;
+    camera.y = getFixedCameraY();
     camera.shake = 0;
     camera.shakeX = 0;
     camera.shakeY = 0;
@@ -863,7 +932,7 @@
       maxHp: rule.hp,
       speed: rule.speed,
       points: rule.points,
-      label: rule.label,
+      label: getEnemyLabel(type),
       airborne: Boolean(rule.airborne),
       hazard: Boolean(rule.hazard),
       state: "alive",
@@ -1059,7 +1128,7 @@
       <p>Giocatore: <strong>${playerProfile.name}</strong></p>
       <p>${subtitle}</p>
       <p>Punti totali: <strong>${score}</strong></p>
-      <p class="controls">Invio o pulsante per ripartire.</p>
+      <p class="controls">Premi il pulsante per ripartire.</p>
       <button id="start-btn" type="button">${win ? "Nuovo quadro" : "Riprova"}</button>
     `;
 
@@ -1150,14 +1219,27 @@
   function getMoveInput() {
     let x = 0;
 
-    if (keys.has("KeyA") || keys.has("ArrowLeft")) x -= 1;
-    if (keys.has("KeyD") || keys.has("ArrowRight")) x += 1;
+    if (keys.has("ArrowLeft")) x -= 1;
+    if (keys.has("ArrowRight")) x += 1;
 
     if (touchMove.active) {
       x += touchMove.x;
     }
 
     return clamp(x, -1, 1);
+  }
+
+  function cycleWeaponMode(withFx = true) {
+    playerFireMode = playerFireMode === "mailShot" ? "meetingShot" : "mailShot";
+    updateWeaponButton();
+
+    if (!withFx || gameState !== "playing") return;
+    spawnImpactParticles(
+      player.x + player.w * 0.5,
+      player.y + player.h * 0.45,
+      playerFireMode === "mailShot" ? "#d8f2ff" : "#a5cbff",
+      8
+    );
   }
 
   function findAutoAimTarget(originX, originY, facing) {
@@ -1712,6 +1794,42 @@
     }
   }
 
+  function canOccupyAt(entity, x, y, ignorePlatform = null) {
+    const probe = { x, y, w: entity.w, h: entity.h };
+    for (const platform of level.platforms) {
+      if (!platform.solid || platform === ignorePlatform) continue;
+      if (aabbOverlap(probe, platform)) return false;
+    }
+    return true;
+  }
+
+  function tryLedgeAssist(entity, platform, side) {
+    if (entity !== player) return false;
+    if (!platform.solid || platform.kind === "ground") return false;
+    if (entity.vy > 120) return false;
+
+    const previousFeet = entity.prevY + entity.h;
+    if (previousFeet < platform.y - 88 || previousFeet > platform.y + 18) return false;
+
+    const edgeInset = Math.min(8, Math.max(0, platform.w - entity.w));
+    let landingX =
+      side > 0
+        ? platform.x + edgeInset
+        : platform.x + platform.w - entity.w - edgeInset;
+    landingX = clamp(landingX, platform.x, platform.x + platform.w - entity.w);
+    const landingY = platform.y - entity.h;
+
+    if (!canOccupyAt(entity, landingX, landingY, platform)) return false;
+
+    entity.x = landingX;
+    entity.y = landingY;
+    entity.prevY = landingY;
+    entity.vx = 0;
+    entity.vy = 0;
+    entity.onGround = true;
+    return true;
+  }
+
   function resolveEntityMovement(entity, dt) {
     entity.prevX = entity.x;
     entity.prevY = entity.y;
@@ -1723,8 +1841,10 @@
       if (!aabbOverlap(entity, platform)) continue;
 
       if (entity.prevX + entity.w <= platform.x) {
+        if (tryLedgeAssist(entity, platform, 1)) continue;
         entity.x = platform.x - entity.w;
       } else if (entity.prevX >= platform.x + platform.w) {
+        if (tryLedgeAssist(entity, platform, -1)) continue;
         entity.x = platform.x + platform.w;
       } else {
         entity.x = entity.prevX;
@@ -1805,20 +1925,25 @@
 
   function updateCamera() {
     const targetX = clamp(player.x - canvas.width * 0.35, 0, Math.max(0, level.width - canvas.width));
-    const targetY = clamp(player.y - canvas.height * 0.72, 0, Math.max(0, level.height - canvas.height));
+    const targetY = getFixedCameraY();
 
     camera.x += (targetX - camera.x) * 0.12;
-    camera.y += (targetY - camera.y) * 0.1;
+    camera.y = targetY;
 
     if (camera.shake > 0.2) {
       camera.shake *= 0.84;
       camera.shakeX = (Math.random() * 2 - 1) * camera.shake;
-      camera.shakeY = (Math.random() * 2 - 1) * camera.shake;
+      camera.shakeY = 0;
     } else {
       camera.shake = 0;
       camera.shakeX = 0;
       camera.shakeY = 0;
     }
+  }
+
+  function getFixedCameraY() {
+    const maxY = Math.max(0, level.height - canvas.height);
+    return clamp(level.groundY - canvas.height * 0.84, 0, maxY);
   }
 
   function updateHud() {
@@ -1836,6 +1961,7 @@
       playerNameHudEl.textContent = playerProfile.name;
     }
     drawPlayerPortrait();
+    updateWeaponButton();
   }
 
   function getProgress() {
@@ -1925,27 +2051,117 @@
     for (const windowFrame of level.windows) {
       if (!isVisible(windowFrame.x, windowFrame.y, windowFrame.w, windowFrame.h, 180)) continue;
 
-      ctx.fillStyle = "#244d69";
-      ctx.fillRect(windowFrame.x - 10, windowFrame.y - 10, windowFrame.w + 20, windowFrame.h + 20);
+      const x = windowFrame.x;
+      const y = windowFrame.y;
+      const w = windowFrame.w;
+      const h = windowFrame.h;
 
-      const glass = ctx.createLinearGradient(
-        windowFrame.x,
-        windowFrame.y,
-        windowFrame.x,
-        windowFrame.y + windowFrame.h
-      );
-      glass.addColorStop(0, "#6d98ba");
-      glass.addColorStop(1, "#4c7392");
-      ctx.fillStyle = glass;
-      ctx.fillRect(windowFrame.x, windowFrame.y, windowFrame.w, windowFrame.h);
+      // Back panel where the in-store POS is mounted.
+      ctx.fillStyle = "rgba(31, 79, 105, 0.46)";
+      ctx.fillRect(x - 10, y - 10, w + 20, h + 20);
 
-      ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
-      ctx.fillRect(windowFrame.x + 12, windowFrame.y + 10, windowFrame.w * 0.42, 12);
+      const centerX = x + w * 0.5;
+      const termW = Math.min(136, w * 0.62);
+      const termH = Math.min(92, h * 0.72);
+      const termX = centerX - termW * 0.5;
+      const termY = y + h * 0.2;
+      const standTopY = termY + termH + 2;
+      const baseY = standTopY + 22;
 
-      ctx.fillStyle = "rgba(19, 43, 61, 0.36)";
-      for (let y = windowFrame.y + 28; y < windowFrame.y + windowFrame.h; y += 12) {
-        ctx.fillRect(windowFrame.x, y, windowFrame.w, 4);
+      // Soft shadow on wall.
+      ctx.fillStyle = "rgba(7, 18, 28, 0.35)";
+      ctx.beginPath();
+      ctx.ellipse(centerX + 5, termY + termH * 0.65, termW * 0.56, termH * 0.5, -0.12, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Receipt strip on top.
+      ctx.fillStyle = "#f2f8fc";
+      ctx.fillRect(termX + termW * 0.6, termY - 13, termW * 0.24, 13);
+      ctx.fillStyle = "#d8e6ef";
+      ctx.fillRect(termX + termW * 0.62, termY - 8, termW * 0.2, 2);
+
+      // Terminal body in perspective.
+      const shellGrad = ctx.createLinearGradient(termX, termY, termX, termY + termH);
+      shellGrad.addColorStop(0, "#97b2c4");
+      shellGrad.addColorStop(0.55, "#6f8da1");
+      shellGrad.addColorStop(1, "#49657a");
+      ctx.fillStyle = shellGrad;
+      ctx.beginPath();
+      ctx.moveTo(termX + 10, termY + 8);
+      ctx.lineTo(termX + termW - 2, termY + 2);
+      ctx.lineTo(termX + termW - 14, termY + termH - 8);
+      ctx.lineTo(termX + 2, termY + termH);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = "#253f51";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Screen.
+      const screenX = termX + termW * 0.08;
+      const screenY = termY + termH * 0.12;
+      const screenW = termW * 0.52;
+      const screenH = termH * 0.24;
+      ctx.fillStyle = "#152737";
+      ctx.fillRect(screenX, screenY, screenW, screenH);
+      ctx.fillStyle = "#81cad7";
+      ctx.fillRect(screenX + 3, screenY + 3, screenW - 6, screenH - 6);
+      ctx.fillStyle = "rgba(255,255,255,0.22)";
+      ctx.fillRect(screenX + 6, screenY + 5, screenW * 0.46, 4);
+
+      // Card slot + inserted card.
+      const slotX = termX + termW * 0.63;
+      const slotY = termY + termH * 0.28;
+      const slotW = termW * 0.24;
+      ctx.fillStyle = "#1a2c3b";
+      ctx.fillRect(slotX, slotY, slotW, 6);
+      ctx.fillStyle = "#d9eef9";
+      ctx.fillRect(slotX + slotW * 0.46, slotY - 8, slotW * 0.46, 8);
+      ctx.fillStyle = "#67bde3";
+      ctx.fillRect(slotX + slotW * 0.52, slotY - 6, slotW * 0.28, 3);
+
+      // Keypad.
+      const padX = termX + termW * 0.1;
+      const padY = termY + termH * 0.46;
+      const keyW = Math.max(7, Math.floor(termW * 0.095));
+      const keyH = Math.max(7, Math.floor(termH * 0.105));
+      const gap = 4;
+      for (let row = 0; row < 4; row += 1) {
+        for (let col = 0; col < 3; col += 1) {
+          const kx = padX + col * (keyW + gap);
+          const ky = padY + row * (keyH + gap);
+          ctx.fillStyle = "#1f3548";
+          ctx.fillRect(kx, ky, keyW, keyH);
+          ctx.fillStyle = "rgba(183, 226, 244, 0.72)";
+          ctx.fillRect(kx + 2, ky + 2, keyW - 4, 2);
+        }
       }
+
+      // Contactless icon.
+      const nfcX = termX + termW * 0.78;
+      const nfcY = termY + termH * 0.61;
+      ctx.strokeStyle = "#d4f8ff";
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i += 1) {
+        ctx.beginPath();
+        ctx.arc(nfcX, nfcY, 5 + i * 4, -Math.PI * 0.36, Math.PI * 0.36);
+        ctx.stroke();
+      }
+
+      // Stand and desk base.
+      ctx.fillStyle = "#3f5e72";
+      ctx.fillRect(centerX - 7, standTopY, 14, 22);
+      ctx.fillStyle = "#2e4b5f";
+      ctx.fillRect(centerX - 36, baseY, 72, 8);
+      ctx.fillStyle = "rgba(0,0,0,0.22)";
+      ctx.fillRect(centerX - 40, baseY + 7, 80, 4);
+
+      ctx.fillStyle = "#e9f8ff";
+      ctx.font = "700 9px Trebuchet MS, sans-serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText("STORE POS", termX + 8, termY + termH - 9);
     }
 
     for (const lamp of level.lamps) {
@@ -2352,23 +2568,23 @@
     }
 
     if (label && maxHp > 1) {
-      drawHpBar(x + w * 0.5 - 22, y - 8, 44, 6, hp / maxHp);
+      const hpW = clamp(w * 0.65, 44, 184);
+      const hpH = h > 120 ? 9 : 6;
+      drawHpBar(x + w * 0.5 - hpW * 0.5, y - 8, hpW, hpH, hp / maxHp);
     }
 
-    const outline = "#101923";
     const speedFactor = clamp(Math.abs(entity.vx || 0) / 185, 0, 1.5) * motionBoost;
-    const phase = worldTime * (4.7 + speedFactor * 2.7) + (entity.seed || x * 0.04);
-    const bob = Math.sin(phase * 2) * (0.45 + speedFactor * 1.25);
-    const legA = Math.sin(phase) * (0.35 + speedFactor * 1.05);
-    const legB = -Math.sin(phase) * (0.35 + speedFactor * 1.05);
-    const armA = -Math.sin(phase + 0.35) * (0.25 + speedFactor * 0.75);
-    const armB = Math.sin(phase + 0.35) * (0.25 + speedFactor * 0.75);
+    const phase = worldTime * (4.2 + speedFactor * 2.4) + (entity.seed || x * 0.05);
+    const legA = Math.sin(phase) * 0.62;
+    const legB = -Math.sin(phase) * 0.62;
+    const armA = -Math.sin(phase + 0.35) * 0.62;
+    const armB = Math.sin(phase + 0.35) * 0.62;
 
-    const p = Math.max(2, Math.floor(Math.min(w / 11, h / 16)));
-    const sw = p * 11;
-    const sh = p * 16;
+    const p = Math.max(2, Math.floor(Math.min(w / 12, h / 17)));
+    const sw = p * 12;
+    const sh = p * 17;
     const sx = x + (w - sw) * 0.5;
-    const sy = y + h - sh - 2 + bob;
+    const sy = y + h - sh - 2;
 
     ctx.save();
     if (facing < 0) {
@@ -2381,69 +2597,96 @@
       ctx.globalAlpha = 0.68;
     }
 
-    const cell = (gx, gy, gw, gh, color, border = outline) => {
-      const px = Math.round(sx + gx * p);
-      const py = Math.round(sy + gy * p);
-      const pw = Math.max(1, Math.round(gw * p));
-      const ph = Math.max(1, Math.round(gh * p));
-      if (border) {
-        ctx.fillStyle = border;
-        ctx.fillRect(px - 1, py - 1, pw + 2, ph + 2);
-      }
-      ctx.fillStyle = color;
+    const shadeHex = (hex, amount) => {
+      const source = String(hex || "").replace("#", "");
+      if (source.length !== 6) return hex;
+      const num = Number.parseInt(source, 16);
+      const r = clamp(((num >> 16) & 255) + amount, 0, 255);
+      const g = clamp(((num >> 8) & 255) + amount, 0, 255);
+      const b = clamp((num & 255) + amount, 0, 255);
+      return `rgb(${r}, ${g}, ${b})`;
+    };
+
+    const drawVoxelBlock = (bx, by, bw, bh, baseColor, depth = Math.max(1, Math.round(p * 0.42))) => {
+      const px = Math.round(bx);
+      const py = Math.round(by);
+      const pw = Math.max(2, Math.round(bw));
+      const ph = Math.max(2, Math.round(bh));
+      const d = Math.max(1, Math.min(depth, Math.round(Math.min(pw, ph) * 0.26)));
+
+      ctx.fillStyle = shadeHex(baseColor, 24);
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + d, py - d);
+      ctx.lineTo(px + pw + d, py - d);
+      ctx.lineTo(px + pw, py);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = shadeHex(baseColor, -22);
+      ctx.beginPath();
+      ctx.moveTo(px + pw, py);
+      ctx.lineTo(px + pw + d, py - d);
+      ctx.lineTo(px + pw + d, py + ph - d);
+      ctx.lineTo(px + pw, py + ph);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = baseColor;
       ctx.fillRect(px, py, pw, ph);
+      ctx.strokeStyle = "rgba(13, 22, 34, 0.8)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(px, py, pw, ph);
     };
 
-    const pixel = (gx, gy, color) => {
-      ctx.fillStyle = color;
-      ctx.fillRect(Math.round(sx + gx * p), Math.round(sy + gy * p), p, p);
-    };
-
-    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
     ctx.beginPath();
     ctx.ellipse(x + w * 0.5, y + h - 2, w * 0.43, 6, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    cell(2, 10 + legA, 2, 4, palette.pants);
-    cell(6, 10 + legB, 2, 4, palette.pants);
-    cell(1.5, 14, 3.2, 1.2, "#35557d");
-    cell(5.6, 14, 3.2, 1.2, "#35557d");
-    pixel(2, 14, "#b9dcff");
-    pixel(6, 14, "#b9dcff");
+    // Legs and shoes
+    drawVoxelBlock(sx + p * 2.1, sy + p * (10 + legA), p * 2.3, p * 5.1, palette.pants);
+    drawVoxelBlock(sx + p * 6.3, sy + p * (10 + legB), p * 2.3, p * 5.1, palette.pants);
+    drawVoxelBlock(sx + p * 1.8, sy + p * 15, p * 2.9, p * 1.2, "#4d6c98");
+    drawVoxelBlock(sx + p * 6, sy + p * 15, p * 2.9, p * 1.2, "#4d6c98");
 
-    cell(3, 6, 5, 4.4, palette.torso);
-    cell(2.2, 7.2 + armA, 1.1, 2.8, palette.torso);
-    cell(8, 7.2 + armB, 1.05, 2.8, palette.skin);
-    cell(6, 7, 1, 2, palette.accent);
-    if (feminine) {
-      cell(3, 9.6, 5, 1.9, palette.torso);
-      pixel(4.3, 10, palette.accent);
-      pixel(5.2, 10, palette.accent);
-    }
+    // Torso and arms
+    drawVoxelBlock(sx + p * 2.3, sy + p * 5.2, p * 6, p * 6.2, palette.torso);
+    drawVoxelBlock(sx + p * 0.6, sy + p * (6.1 + armA), p * 1.8, p * 5, palette.torso);
+    drawVoxelBlock(sx + p * 8.2, sy + p * (6.1 + armB), p * 1.8, p * 4.4, palette.torso);
+    drawVoxelBlock(sx + p * 8.2, sy + p * (9.8 + armB), p * 1.8, p * 1.3, palette.skin);
 
-    cell(5, 1, 4.2, 4.2, palette.skin);
-    pixel(4.3, 2.9, palette.skin);
-    pixel(9.2, 2.9, palette.skin);
+    // Shirt/tie accent
+    ctx.fillStyle = shadeHex(palette.accent, 14);
+    ctx.fillRect(Math.round(sx + p * 5.05), Math.round(sy + p * 6.1), Math.round(p * 1.05), Math.round(p * 3.8));
 
-    cell(4.2, 0, 4.2, 3, palette.hair);
-    cell(3.2, 1, 1.2, 3.2, palette.hair);
+    // Head cube
+    drawVoxelBlock(sx + p * 3, sy + p * 0.8, p * 4.9, p * 4.9, palette.skin, Math.max(1, Math.round(p * 0.5)));
+    drawVoxelBlock(sx + p * 2.9, sy + p * 0.1, p * 5, p * 2.2, palette.hair, Math.max(1, Math.round(p * 0.4)));
     if (feminine || palette.hairLong) {
-      cell(3.2, 3, feminine ? 2.2 : 1.1, 4.1, palette.hair);
-      cell(6.4, 4, 1.1, 2.1, palette.hair);
+      drawVoxelBlock(sx + p * 2.7, sy + p * 2, p * 1.2, p * 3.5, palette.hair, Math.max(1, Math.round(p * 0.35)));
       if (feminine) {
-        pixel(4.6, 0, palette.accent);
+        ctx.fillStyle = shadeHex(palette.accent, 18);
+        ctx.fillRect(Math.round(sx + p * 4.8), Math.round(sy + p * 0.8), Math.round(p * 0.9), Math.round(p * 0.6));
       }
     }
 
-    cell(7.3, 2, 1.6, 1, "#f3f9ff", null);
-    pixel(8.15, 2, "#101923");
-    cell(7.2, 4, 1.9, 1, feminine ? "#a1557c" : "#5b3c33", null);
+    // Face details (side profile)
+    ctx.fillStyle = "#f6fbff";
+    ctx.fillRect(Math.round(sx + p * 6.45), Math.round(sy + p * 2.35), Math.round(p * 1), Math.round(p * 0.8));
+    ctx.fillStyle = "#0f1622";
+    ctx.fillRect(Math.round(sx + p * 6.9), Math.round(sy + p * 2.55), Math.round(p * 0.35), Math.round(p * 0.35));
+    ctx.fillStyle = shadeHex(palette.skin, -12);
+    ctx.fillRect(Math.round(sx + p * 7.2), Math.round(sy + p * 3.25), Math.round(p * 0.85), Math.round(p * 0.8));
+    ctx.fillStyle = feminine ? "#a1557c" : "#5b3c33";
+    ctx.fillRect(Math.round(sx + p * 6.2), Math.round(sy + p * 4.5), Math.round(p * 1.45), Math.round(p * 0.52));
     if (masked) {
-      cell(7.1, 3, 2, 2, "#1c2230");
+      ctx.fillStyle = "#1c2230";
+      ctx.fillRect(Math.round(sx + p * 6.1), Math.round(sy + p * 3.1), Math.round(p * 1.7), Math.round(p * 1.55));
     }
 
     if (trip) {
-      cell(8.3, 12.5, 1.8, 0.9, "#f4dda8", "#6a5b3e");
+      drawVoxelBlock(sx + p * 9.1, sy + p * 12.3, p * 1.6, p * 1.1, "#f4dda8", Math.max(1, Math.round(p * 0.3)));
     }
 
     ctx.restore();
@@ -2513,17 +2756,37 @@
   }
 
   function drawBigBossAvatar(enemy) {
+    const palette = {
+      skin: "#e8bda3",
+      hair: "#212a34",
+      torso: "#4a668c",
+      pants: "#2c3b53",
+      accent: "#f6cd64",
+      feminine: false,
+      hairLong: false,
+    };
+
+    drawHumanAvatar(
+      enemy,
+      palette,
+      enemy.label,
+      enemy.dir,
+      enemy.state === "stunned",
+      enemy.hp,
+      enemy.maxHp,
+      false,
+      false,
+      1.85
+    );
+
+    // Extra boss details on top of the Minecraft base style.
+    const phase = worldTime * 6 + enemy.seed;
+    const tieSwing = Math.sin(phase) * 4.6;
+    const pulse = 0.5 + Math.sin(phase * 1.4) * 0.5;
     const x = enemy.x;
     const y = enemy.y;
     const w = enemy.w;
     const h = enemy.h;
-    const phase = worldTime * 2.7 + enemy.seed;
-    const stride = Math.sin(phase) * 0.42;
-    const bob = Math.sin(phase * 2) * 3;
-    const stunned = enemy.state === "stunned";
-
-    drawLabel(enemy.label, x + w * 0.5, y - 26, stunned ? "#dfffe0" : "#ffd7cf");
-    drawHpBar(x + w * 0.5 - 92, y - 14, 184, 10, enemy.hp / enemy.maxHp);
 
     ctx.save();
     if (enemy.dir < 0) {
@@ -2532,84 +2795,31 @@
       ctx.translate(-(x + w * 0.5), 0);
     }
 
-    if (stunned) {
+    if (enemy.state === "stunned") {
       ctx.globalAlpha = 0.72;
     }
 
-    ctx.fillStyle = "rgba(0,0,0,0.34)";
+    // Tie
+    const tieX = x + w * 0.53;
+    const tieY = y + h * 0.43;
+    ctx.fillStyle = "#ffd66f";
     ctx.beginPath();
-    ctx.ellipse(x + w * 0.5, y + h - 4, w * 0.38, 12, 0, 0, Math.PI * 2);
+    ctx.moveTo(tieX, tieY);
+    ctx.lineTo(tieX + 6 + tieSwing * 0.22, tieY + 16);
+    ctx.lineTo(tieX + 1, tieY + 30);
+    ctx.lineTo(tieX - 5 + tieSwing * 0.18, tieY + 16);
+    ctx.closePath();
     ctx.fill();
 
-    const legY = y + h - 96 + bob;
-    const legW = 34;
-    const legH = 88;
-    const torsoX = x + 48;
-    const torsoY = y + 66 + bob;
-    const torsoW = 72;
-    const torsoH = 112;
+    // Shoulder badge
+    ctx.fillStyle = "#f0d47a";
+    ctx.fillRect(x + w * 0.66, y + h * 0.36, 10, 7);
 
-    const drawHeavyLimb = (ox, oy, lw, lh, angle, color) => {
-      ctx.save();
-      ctx.translate(ox, oy);
-      ctx.rotate(angle);
-      ctx.fillStyle = color;
-      ctx.fillRect(-lw * 0.5, 0, lw, lh);
-      ctx.strokeStyle = "#1b1c24";
-      ctx.lineWidth = 3;
-      ctx.strokeRect(-lw * 0.5, 0, lw, lh);
-      ctx.restore();
-    };
-
-    drawHeavyLimb(x + 60, legY, legW, legH, stride * 0.28, "#352939");
-    drawHeavyLimb(x + 95, legY, legW + 2, legH + 4, -stride * 0.3, "#352939");
-
-    ctx.fillStyle = "#212430";
-    ctx.fillRect(x + 39, y + h - 10, 42, 10);
-    ctx.fillRect(x + 86, y + h - 10, 44, 10);
-
-    const torsoGrad = ctx.createLinearGradient(torsoX, torsoY, torsoX, torsoY + torsoH);
-    torsoGrad.addColorStop(0, "#7c2f3f");
-    torsoGrad.addColorStop(1, "#411f2e");
-    ctx.fillStyle = torsoGrad;
-    ctx.fillRect(torsoX, torsoY, torsoW, torsoH);
-    ctx.fillStyle = "#e87a63";
-    ctx.fillRect(torsoX + torsoW - 20, torsoY + 22, 13, 36);
-    ctx.fillStyle = "#ffcf79";
-    ctx.fillRect(torsoX + 10, torsoY + 14, 8, 8);
-
-    drawHeavyLimb(torsoX + 10, torsoY + 34, 18, 72, -0.28 + stride * 0.16, "#5f2f3e");
-    drawHeavyLimb(torsoX + torsoW + 8, torsoY + 34, 20, 68, 0.23 - stride * 0.16, "#5f2f3e");
-
-    ctx.fillStyle = "#f4c8b0";
-    ctx.beginPath();
-    ctx.arc(x + 121, y + 52 + bob * 0.4, 26, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#241920";
-    ctx.beginPath();
-    ctx.arc(x + 118, y + 43 + bob * 0.35, 23, Math.PI, Math.PI * 2);
-    ctx.fill();
-    ctx.fillRect(x + 99, y + 50, 10, 19);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(x + 126, y + 49 + bob * 0.3, 7, 5);
-    ctx.fillStyle = "#12131a";
-    ctx.fillRect(x + 129, y + 51 + bob * 0.3, 3, 3);
-
-    ctx.fillStyle = "#b34734";
-    ctx.beginPath();
-    ctx.moveTo(x + 128, y + 69 + bob * 0.4);
-    ctx.quadraticCurveTo(x + 140, y + 72 + bob * 0.4, x + 144, y + 79 + bob * 0.4);
-    ctx.quadraticCurveTo(x + 137, y + 78 + bob * 0.4, x + 127, y + 75 + bob * 0.4);
-    ctx.fill();
-
-    ctx.strokeStyle = "#0f1118";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(torsoX, torsoY, torsoW, torsoH);
-    ctx.beginPath();
-    ctx.arc(x + 121, y + 52 + bob * 0.4, 26, 0, Math.PI * 2);
-    ctx.stroke();
+    // Boss eyes glow
+    ctx.fillStyle = `rgba(255, 120, 100, ${0.25 + pulse * 0.35})`;
+    ctx.fillRect(x + w * 0.63, y + h * 0.25, 7, 3);
+    ctx.fillStyle = "rgba(255, 205, 178, 0.8)";
+    ctx.fillRect(x + w * 0.61, y + h * 0.24, 11, 1);
 
     ctx.restore();
   }
@@ -2758,30 +2968,53 @@
     const y = enemy.y;
     const w = enemy.w;
     const h = enemy.h;
+    const pulse = 1 + Math.sin(worldTime * 5 + enemy.seed) * 0.045;
+    const cx = x + w * 0.5;
+    const cy = y + h * 0.56;
+    const coinR = Math.min(w, h) * 0.38 * pulse;
+    ctx.save();
 
-    ctx.fillStyle = enemy.state === "stunned" ? "#8ea8a0" : "#4f7f72";
-    ctx.fillRect(x, y + 8, w, h - 8);
-
-    ctx.fillStyle = "#b9e6d2";
-    ctx.fillRect(x + 4, y + 4, w - 8, h * 0.44);
-
-    ctx.strokeStyle = "#16343a";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(x, y + 8, w, h - 8);
-
-    ctx.strokeStyle = "#2c5f56";
-    ctx.lineWidth = 2;
+    ctx.fillStyle = "rgba(0,0,0,0.26)";
     ctx.beginPath();
-    ctx.moveTo(x + 10, y + h * 0.48);
-    ctx.lineTo(x + 20, y + h * 0.38);
-    ctx.lineTo(x + 30, y + h * 0.46);
-    ctx.lineTo(x + 44, y + h * 0.3);
-    ctx.lineTo(x + 54, y + h * 0.35);
+    ctx.ellipse(cx, y + h - 3, w * 0.34, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const ringGrad = ctx.createRadialGradient(cx - 5, cy - 8, 4, cx, cy, coinR + 6);
+    ringGrad.addColorStop(0, enemy.state === "stunned" ? "#d1d5b2" : "#fff3a8");
+    ringGrad.addColorStop(0.6, enemy.state === "stunned" ? "#b5bc8d" : "#e5cf62");
+    ringGrad.addColorStop(1, enemy.state === "stunned" ? "#798063" : "#836e2a");
+    ctx.fillStyle = ringGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, coinR + 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = enemy.state === "stunned" ? "#adb27e" : "#d5ba4f";
+    ctx.beginPath();
+    ctx.arc(cx, cy, coinR - 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = enemy.state === "stunned" ? "#7f845d" : "#4d3f16";
+    ctx.lineWidth = 3;
     ctx.stroke();
 
-    ctx.fillStyle = "#1d4340";
-    ctx.fillRect(x + 8, y + h - 6, 10, 6);
-    ctx.fillRect(x + w - 18, y + h - 6, 10, 6);
+    // Clear Euro symbol in the center.
+    const euroColor = enemy.state === "stunned" ? "#f0f3d4" : "#fff8cf";
+    const euroSize = Math.max(24, Math.floor(coinR * 1.22));
+    ctx.font = `900 ${euroSize}px Trebuchet MS, Arial Black, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = enemy.state === "stunned" ? "#6f6f46" : "#5f4b1d";
+    ctx.strokeText("€", cx + 1, cy + 1);
+    ctx.fillStyle = euroColor;
+    ctx.fillText("€", cx + 1, cy + 1);
+
+    ctx.fillStyle = "rgba(255,255,255,0.24)";
+    ctx.beginPath();
+    ctx.arc(cx - coinR * 0.26, cy - coinR * 0.32, coinR * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
   function drawProjectiles() {
@@ -2939,7 +3172,7 @@
 
     ctx.textAlign = "center";
     ctx.fillText(
-      `FUGA ORIZZONTALE - ARMA: ${PLAYER_FIRE_MODES[playerFireMode].label} (Q)`,
+      `FUGA ORIZZONTALE - ARMA: ${PLAYER_FIRE_MODES[playerFireMode].label}`,
       x + panelW * 0.5,
       y + 16
     );
@@ -3022,44 +3255,27 @@
   window.addEventListener("keydown", (event) => {
     if (event.repeat) return;
 
-    if (event.code === "Enter" && gameState !== "playing") {
-      startGame();
-      return;
+    if (gameState !== "playing") return;
+
+    if (HELD_INPUT_CODES.has(event.code)) {
+      keys.add(event.code);
     }
 
-    if (event.code === "KeyM") {
-      toggleMusic();
-      event.preventDefault();
-      return;
-    }
-
-    if (event.code === "KeyQ" || event.code === "KeyE") {
-      playerFireMode = playerFireMode === "mailShot" ? "meetingShot" : "mailShot";
-      spawnImpactParticles(
-        player.x + player.w * 0.5,
-        player.y + player.h * 0.45,
-        playerFireMode === "mailShot" ? "#d8f2ff" : "#a5cbff",
-        8
-      );
-      event.preventDefault();
-      return;
-    }
-
-    keys.add(event.code);
-
-    if (event.code === "Space" || event.code === "KeyJ") {
+    if (event.code === "Space") {
       attackQueued = true;
       event.preventDefault();
     }
 
-    if (event.code === "KeyW" || event.code === "ArrowUp" || event.code === "KeyK") {
+    if (event.code === "ArrowUp") {
       jumpQueued = true;
       event.preventDefault();
     }
   });
 
   window.addEventListener("keyup", (event) => {
-    keys.delete(event.code);
+    if (HELD_INPUT_CODES.has(event.code)) {
+      keys.delete(event.code);
+    }
   });
 
   canvas.addEventListener("pointerdown", () => {
@@ -3179,6 +3395,7 @@
 
   document.getElementById("start-btn")?.addEventListener("click", startGame);
   musicToggleBtn?.addEventListener("click", () => toggleMusic());
+  weaponToggleBtn?.addEventListener("click", () => cycleWeaponMode(true));
   genderMaleBtn?.addEventListener("click", () => setPlayerGender("male"));
   genderFemaleBtn?.addEventListener("click", () => setPlayerGender("female"));
 
@@ -3199,9 +3416,34 @@
     updateHud();
   });
 
+  for (const type in enemyLabelInputs) {
+    const inputEl = enemyLabelInputs[type];
+    if (!inputEl) continue;
+
+    const fallback = ENEMY_RULES[type]?.label || type.toUpperCase();
+    inputEl.value = enemyLabelProfile[type] || fallback;
+
+    inputEl.addEventListener("input", () => {
+      const draft = sanitizeEnemyLabel(inputEl.value, "");
+      if (inputEl.value !== draft) {
+        inputEl.value = draft;
+      }
+      if (draft) {
+        enemyLabelProfile[type] = draft;
+      }
+    });
+
+    inputEl.addEventListener("blur", () => {
+      const normalized = sanitizeEnemyLabel(inputEl.value, fallback);
+      inputEl.value = normalized;
+      enemyLabelProfile[type] = normalized;
+    });
+  }
+
   if (nameInputEl) {
     nameInputEl.value = playerProfile.name;
   }
+  applyEnemyLabelsFromSetup();
   refreshGenderButtons();
 
   const isTouchDevice = window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
