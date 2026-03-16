@@ -168,6 +168,8 @@
     active: false,
     pointerId: null,
   };
+  let touchControlsEnabled = false;
+  const touchModeQuery = window.matchMedia("(max-width: 900px), (pointer: coarse)");
 
   const camera = {
     x: 0,
@@ -3233,9 +3235,47 @@
     return Math.max(min, Math.min(max, value));
   }
 
+  function getViewportSize() {
+    const viewport = window.visualViewport;
+    const rawW = viewport ? viewport.width : window.innerWidth;
+    const rawH = viewport ? viewport.height : window.innerHeight;
+
+    return {
+      width: Math.max(320, Math.round(rawW)),
+      height: Math.max(320, Math.round(rawH)),
+    };
+  }
+
+  function setTouchControlsEnabled(enabled) {
+    const nextEnabled = Boolean(enabled);
+    if (touchControlsEnabled === nextEnabled) {
+      touchUI.setAttribute("aria-hidden", nextEnabled ? "false" : "true");
+      return;
+    }
+
+    touchControlsEnabled = nextEnabled;
+    touchUI.setAttribute("aria-hidden", touchControlsEnabled ? "false" : "true");
+
+    if (!touchControlsEnabled) {
+      resetTouchPad();
+      touchAttackState.active = false;
+      touchAttackState.pointerId = null;
+      touchJumpState.active = false;
+      touchJumpState.pointerId = null;
+    }
+  }
+
+  function refreshResponsiveUiMode() {
+    setTouchControlsEnabled(touchModeQuery.matches);
+  }
+
   function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const viewport = getViewportSize();
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    document.documentElement.style.setProperty("--app-height", `${viewport.height}px`);
+    refreshResponsiveUiMode();
+    camera.y = getFixedCameraY();
   }
 
   function gameLoop(ts) {
@@ -3251,11 +3291,33 @@
   }
 
   window.addEventListener("resize", resize);
+  window.addEventListener("orientationchange", resize);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", resize);
+    window.visualViewport.addEventListener("scroll", resize);
+  }
+
+  if (typeof touchModeQuery.addEventListener === "function") {
+    touchModeQuery.addEventListener("change", refreshResponsiveUiMode);
+  } else if (typeof touchModeQuery.addListener === "function") {
+    touchModeQuery.addListener(refreshResponsiveUiMode);
+  }
 
   window.addEventListener("keydown", (event) => {
     if (event.repeat) return;
 
     if (gameState !== "playing") return;
+
+    const isGameplayKey =
+      event.code === "Space" ||
+      event.code === "ArrowUp" ||
+      event.code === "ArrowLeft" ||
+      event.code === "ArrowRight" ||
+      event.code === "ShiftLeft" ||
+      event.code === "ShiftRight";
+    if (isGameplayKey) {
+      event.preventDefault();
+    }
 
     if (HELD_INPUT_CODES.has(event.code)) {
       keys.add(event.code);
@@ -3273,13 +3335,25 @@
   });
 
   window.addEventListener("keyup", (event) => {
+    if (
+      gameState === "playing" &&
+      (event.code === "ArrowLeft" ||
+        event.code === "ArrowRight" ||
+        event.code === "ArrowUp" ||
+        event.code === "ShiftLeft" ||
+        event.code === "ShiftRight")
+    ) {
+      event.preventDefault();
+    }
+
     if (HELD_INPUT_CODES.has(event.code)) {
       keys.delete(event.code);
     }
   });
 
-  canvas.addEventListener("pointerdown", () => {
+  canvas.addEventListener("pointerdown", (event) => {
     if (gameState !== "playing") return;
+    event.preventDefault();
     attackQueued = true;
   });
 
@@ -3445,9 +3519,7 @@
   }
   applyEnemyLabelsFromSetup();
   refreshGenderButtons();
-
-  const isTouchDevice = window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
-  touchUI.setAttribute("aria-hidden", isTouchDevice ? "false" : "true");
+  refreshResponsiveUiMode();
 
   initMusicSystem();
   resize();

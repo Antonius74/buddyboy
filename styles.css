@@ -8,6 +8,11 @@
   --accent: #4bd4ff;
   --danger: #ff7355;
   --ok: #89f389;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --app-height: 100dvh;
 }
 
 * {
@@ -24,12 +29,14 @@ body {
   font-family: "Impact", "Haettenschweiler", "Arial Narrow Bold", sans-serif;
   color: var(--text);
   background: radial-gradient(circle at 15% 15%, var(--bg-accent), var(--bg-mid) 40%, var(--bg-deep));
+  overscroll-behavior: none;
 }
 
 .app-shell {
   position: relative;
   width: 100%;
-  height: 100%;
+  height: var(--app-height);
+  min-height: 100svh;
 }
 
 #game {
@@ -38,13 +45,16 @@ body {
   width: 100%;
   height: 100%;
   display: block;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .hud {
   position: absolute;
-  top: 14px;
-  left: 14px;
-  right: 14px;
+  top: calc(14px + var(--safe-top));
+  left: calc(14px + var(--safe-left));
+  right: calc(14px + var(--safe-right));
   display: flex;
   gap: 10px;
   z-index: 20;
@@ -53,8 +63,8 @@ body {
 
 .music-toggle {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: calc(14px + var(--safe-top));
+  right: calc(14px + var(--safe-right));
   z-index: 22;
   border: 1px solid rgba(157, 236, 255, 0.62);
   border-radius: 999px;
@@ -66,6 +76,7 @@ body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
+  touch-action: none;
 }
 
 .music-toggle:active {
@@ -74,8 +85,8 @@ body {
 
 .weapon-toggle {
   position: absolute;
-  top: 54px;
-  right: 14px;
+  top: calc(54px + var(--safe-top));
+  right: calc(14px + var(--safe-right));
   z-index: 22;
   border: 1px solid rgba(172, 246, 203, 0.65);
   border-radius: 999px;
@@ -87,6 +98,7 @@ body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
+  touch-action: none;
 }
 
 .weapon-toggle:active {
@@ -152,20 +164,33 @@ body {
 }
 
 .state-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   background: rgba(3, 10, 16, 0.76);
   display: none;
-  place-items: center;
+  align-items: center;
+  justify-content: center;
   z-index: 30;
-  padding: 20px;
+  padding: calc(18px + var(--safe-top)) calc(16px + var(--safe-right))
+    calc(18px + var(--safe-bottom)) calc(16px + var(--safe-left));
+  overflow-y: scroll;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: auto;
+  pointer-events: auto;
 }
 
 .state-overlay.visible {
-  display: grid;
+  display: flex;
 }
 
 .panel {
+  width: min(760px, 100%);
+  margin: 0 auto;
   max-width: 760px;
   border: 1px solid rgba(139, 229, 255, 0.4);
   border-radius: 16px;
@@ -173,6 +198,8 @@ body {
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
   padding: 22px;
   text-align: center;
+  max-height: none;
+  overflow: visible;
 }
 
 .kicker {
@@ -326,18 +353,20 @@ body {
   pointer-events: none;
   z-index: 25;
   display: none;
+  touch-action: none;
 }
 
 .touch-pad {
   position: absolute;
-  left: 18px;
-  bottom: 18px;
+  left: calc(18px + var(--safe-left));
+  bottom: calc(18px + var(--safe-bottom));
   width: 132px;
   height: 132px;
   border-radius: 50%;
   border: 1px solid rgba(177, 233, 255, 0.4);
   background: radial-gradient(circle, rgba(119, 248, 187, 0.12), rgba(7, 20, 33, 0.4));
   pointer-events: auto;
+  touch-action: none;
 }
 
 .touch-knob {
@@ -355,8 +384,8 @@ body {
 
 .touch-attack {
   position: absolute;
-  right: 20px;
-  bottom: 18px;
+  right: calc(20px + var(--safe-right));
+  bottom: calc(18px + var(--safe-bottom));
   width: 118px;
   height: 118px;
   border: 1px solid rgba(255, 152, 131, 0.6);
@@ -366,12 +395,13 @@ body {
   font-size: 0.9rem;
   letter-spacing: 0.08em;
   pointer-events: auto;
+  touch-action: none;
 }
 
 .touch-jump {
   position: absolute;
-  right: 116px;
-  bottom: 102px;
+  right: calc(116px + var(--safe-right));
+  bottom: calc(102px + var(--safe-bottom));
   width: 88px;
   height: 88px;
   border: 1px solid rgba(143, 215, 255, 0.6);
@@ -381,26 +411,35 @@ body {
   font-size: 0.74rem;
   letter-spacing: 0.08em;
   pointer-events: auto;
+  touch-action: none;
 }
 
 @media (max-width: 900px), (pointer: coarse) {
+  .state-overlay {
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: calc(8px + var(--safe-top));
+  }
+
   .hud {
-    top: 10px;
-    left: 10px;
-    right: 10px;
+    top: calc(10px + var(--safe-top));
+    left: calc(10px + var(--safe-left));
+    right: calc(132px + var(--safe-right));
     gap: 6px;
   }
 
   .music-toggle {
-    top: 10px;
-    right: 10px;
+    top: calc(10px + var(--safe-top));
+    right: calc(10px + var(--safe-right));
+    width: 116px;
     padding: 6px 10px;
     font-size: 0.64rem;
   }
 
   .weapon-toggle {
-    top: 44px;
-    right: 10px;
+    top: calc(44px + var(--safe-top));
+    right: calc(10px + var(--safe-right));
+    width: 116px;
     padding: 6px 10px;
     font-size: 0.62rem;
   }
@@ -433,12 +472,71 @@ body {
     display: block;
   }
 
+  .touch-pad {
+    left: calc(12px + var(--safe-left));
+    bottom: calc(12px + var(--safe-bottom));
+    width: min(132px, 34vw);
+    height: min(132px, 34vw);
+  }
+
+  .touch-knob {
+    width: min(56px, 14vw);
+    height: min(56px, 14vw);
+    margin-left: calc(min(56px, 14vw) * -0.5);
+    margin-top: calc(min(56px, 14vw) * -0.5);
+  }
+
+  .touch-attack {
+    right: calc(12px + var(--safe-right));
+    bottom: calc(12px + var(--safe-bottom));
+    width: min(118px, 31vw);
+    height: min(118px, 31vw);
+    font-size: clamp(0.66rem, 2.5vw, 0.9rem);
+  }
+
+  .touch-jump {
+    right: calc(96px + var(--safe-right));
+    bottom: calc(92px + var(--safe-bottom));
+    width: min(88px, 23vw);
+    height: min(88px, 23vw);
+    font-size: clamp(0.58rem, 2.1vw, 0.74rem);
+  }
+
   .panel {
     padding: 16px;
     max-width: 96vw;
+    margin-bottom: calc(16px + var(--safe-bottom));
   }
 
   .enemy-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .hud {
+    right: calc(8px + var(--safe-right));
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .hud-score-card {
+    grid-column: 1 / -1;
+    margin-left: 0;
+  }
+
+  .music-toggle {
+    top: auto;
+    bottom: calc(124px + var(--safe-bottom));
+    right: calc(8px + var(--safe-right));
+    width: 108px;
+  }
+
+  .weapon-toggle {
+    top: auto;
+    bottom: calc(82px + var(--safe-bottom));
+    right: calc(8px + var(--safe-right));
+    width: 108px;
   }
 }
