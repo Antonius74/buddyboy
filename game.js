@@ -3536,27 +3536,89 @@
     touchKnob.style.transform = "translate(0px, 0px)";
   }
 
+  let lastTouchStartTs = 0;
   let lastTouchEndTs = 0;
+  let lastTouchX = 0;
+  let lastTouchY = 0;
+  const isEditableTarget = (target) =>
+    target instanceof Element &&
+    target.closest("input, textarea, select, [contenteditable='true']");
+
+  // Robust mobile anti-zoom (iOS Safari/Chrome):
+  // - blocks double-tap zoom
+  // - blocks pinch/gesture zoom
+  document.addEventListener(
+    "touchstart",
+    (event) => {
+      if (isEditableTarget(event.target)) return;
+
+      if (event.touches.length > 1) {
+        event.preventDefault();
+        return;
+      }
+
+      const now = performance.now();
+      if (now - lastTouchStartTs < 360) {
+        event.preventDefault();
+      }
+      lastTouchStartTs = now;
+    },
+    { passive: false, capture: true }
+  );
+
   document.addEventListener(
     "touchend",
     (event) => {
-      const target = event.target;
-      if (
-        target instanceof Element &&
-        target.closest("input, textarea, select, [contenteditable='true']")
-      ) {
+      if (isEditableTarget(event.target)) {
         lastTouchEndTs = performance.now();
         return;
       }
 
       const now = performance.now();
-      if (now - lastTouchEndTs < 320) {
+      const touch = event.changedTouches && event.changedTouches[0];
+      const px = touch ? touch.clientX : lastTouchX;
+      const py = touch ? touch.clientY : lastTouchY;
+      const dt = now - lastTouchEndTs;
+      const dist = Math.hypot(px - lastTouchX, py - lastTouchY);
+
+      if (dt > 0 && dt < 380 && dist < 28 && event.cancelable) {
         event.preventDefault();
       }
+
       lastTouchEndTs = now;
+      lastTouchX = px;
+      lastTouchY = py;
     },
-    { passive: false }
+    { passive: false, capture: true }
   );
+
+  document.addEventListener(
+    "touchmove",
+    (event) => {
+      if (isEditableTarget(event.target)) return;
+      if (event.touches.length > 1) {
+        event.preventDefault();
+      }
+    },
+    { passive: false, capture: true }
+  );
+
+  document.addEventListener(
+    "dblclick",
+    (event) => {
+      if (isEditableTarget(event.target)) return;
+      event.preventDefault();
+    },
+    { passive: false, capture: true }
+  );
+
+  const stopGestureZoom = (event) => {
+    if (isEditableTarget(event.target)) return;
+    event.preventDefault();
+  };
+  document.addEventListener("gesturestart", stopGestureZoom, { passive: false, capture: true });
+  document.addEventListener("gesturechange", stopGestureZoom, { passive: false, capture: true });
+  document.addEventListener("gestureend", stopGestureZoom, { passive: false, capture: true });
 
   bindStartButton(document.getElementById("start-btn"));
   musicToggleBtn?.addEventListener("click", () => {
