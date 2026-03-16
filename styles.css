@@ -1,0 +1,367 @@
+:root {
+  --bg-deep: #071421;
+  --bg-mid: #0e2d46;
+  --bg-accent: #1a536a;
+  --panel: rgba(9, 26, 40, 0.86);
+  --line: rgba(114, 194, 214, 0.35);
+  --text: #edf7ff;
+  --accent: #4bd4ff;
+  --danger: #ff7355;
+  --ok: #89f389;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: "Impact", "Haettenschweiler", "Arial Narrow Bold", sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at 15% 15%, var(--bg-accent), var(--bg-mid) 40%, var(--bg-deep));
+}
+
+.app-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#game {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hud {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  gap: 10px;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.music-toggle {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 22;
+  border: 1px solid rgba(157, 236, 255, 0.62);
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: linear-gradient(130deg, rgba(8, 26, 38, 0.92), rgba(20, 59, 78, 0.88));
+  color: #dff6ff;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.music-toggle:active {
+  transform: translateY(1px);
+}
+
+.hud-card {
+  min-width: 120px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: linear-gradient(130deg, rgba(7, 20, 33, 0.9), rgba(14, 45, 70, 0.78));
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  padding: 8px 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hud-card .label {
+  display: block;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  font-size: 0.64rem;
+  opacity: 0.75;
+}
+
+.hud-card strong {
+  font-size: 1.15rem;
+}
+
+.hud-score-card {
+  margin-left: auto;
+  min-width: 234px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-color: rgba(163, 235, 255, 0.55);
+}
+
+.player-portrait {
+  width: 62px;
+  height: 62px;
+  border-radius: 14px;
+  border: 1px solid rgba(170, 240, 255, 0.72);
+  background: linear-gradient(150deg, rgba(10, 34, 50, 0.9), rgba(22, 63, 84, 0.84));
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  image-rendering: pixelated;
+}
+
+.score-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.score-stack .label {
+  font-size: 0.68rem;
+}
+
+.score-stack #score {
+  font-size: 1.6rem;
+  line-height: 1;
+  color: #ffee9b;
+  text-shadow: 0 0 14px rgba(255, 226, 113, 0.42);
+}
+
+.state-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 10, 16, 0.76);
+  display: none;
+  place-items: center;
+  z-index: 30;
+  padding: 20px;
+}
+
+.state-overlay.visible {
+  display: grid;
+}
+
+.panel {
+  max-width: 760px;
+  border: 1px solid rgba(139, 229, 255, 0.4);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(6, 21, 35, 0.94), rgba(11, 38, 56, 0.92));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+  padding: 22px;
+  text-align: center;
+}
+
+.kicker {
+  margin: 0;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+.panel h1 {
+  margin: 8px 0 14px;
+  font-size: clamp(1.6rem, 5vw, 3rem);
+  letter-spacing: 0.03em;
+}
+
+.panel p {
+  margin: 0 0 10px;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  font-size: clamp(0.96rem, 2.3vw, 1.1rem);
+}
+
+.panel .controls {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.setup-wrap {
+  margin: 6px auto 12px;
+  max-width: 430px;
+  text-align: left;
+  border: 1px solid rgba(138, 225, 255, 0.28);
+  border-radius: 12px;
+  background: rgba(10, 33, 47, 0.58);
+  padding: 10px;
+}
+
+.setup-wrap label {
+  display: block;
+  margin-bottom: 6px;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  font-size: 0.82rem;
+  color: #a8e8ff;
+}
+
+#player-name-input {
+  width: 100%;
+  border: 1px solid rgba(138, 225, 255, 0.35);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  font-size: 1rem;
+  color: #e9f7ff;
+  background: rgba(5, 20, 30, 0.7);
+}
+
+#player-name-input:focus {
+  outline: 2px solid rgba(98, 215, 255, 0.7);
+  outline-offset: 1px;
+}
+
+.gender-pick {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.gender-btn {
+  flex: 1;
+  border: 1px solid rgba(141, 228, 255, 0.4);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  font-weight: 700;
+  color: #dff6ff;
+  background: rgba(12, 39, 57, 0.76);
+  cursor: pointer;
+}
+
+.gender-btn.active {
+  color: #041a29;
+  background: linear-gradient(120deg, #8ef0ff, #77f8bb);
+}
+
+#start-btn {
+  margin-top: 14px;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #06202f;
+  background: linear-gradient(120deg, #77f8bb, #4bd4ff);
+  cursor: pointer;
+}
+
+#start-btn:active {
+  transform: translateY(1px);
+}
+
+.touch-ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 25;
+  display: none;
+}
+
+.touch-pad {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: 1px solid rgba(177, 233, 255, 0.4);
+  background: radial-gradient(circle, rgba(119, 248, 187, 0.12), rgba(7, 20, 33, 0.4));
+  pointer-events: auto;
+}
+
+.touch-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 56px;
+  height: 56px;
+  margin-left: -28px;
+  margin-top: -28px;
+  border-radius: 50%;
+  border: 1px solid rgba(181, 244, 255, 0.7);
+  background: rgba(75, 212, 255, 0.32);
+}
+
+.touch-attack {
+  position: absolute;
+  right: 20px;
+  bottom: 18px;
+  width: 118px;
+  height: 118px;
+  border: 1px solid rgba(255, 152, 131, 0.6);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 115, 85, 0.35), rgba(30, 7, 7, 0.52));
+  color: #fff;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  pointer-events: auto;
+}
+
+.touch-jump {
+  position: absolute;
+  right: 116px;
+  bottom: 102px;
+  width: 88px;
+  height: 88px;
+  border: 1px solid rgba(143, 215, 255, 0.6);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(87, 172, 255, 0.35), rgba(5, 19, 42, 0.52));
+  color: #fff;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  pointer-events: auto;
+}
+
+@media (max-width: 900px), (pointer: coarse) {
+  .hud {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    gap: 6px;
+  }
+
+  .music-toggle {
+    top: 10px;
+    right: 10px;
+    padding: 6px 10px;
+    font-size: 0.64rem;
+  }
+
+  .hud-card {
+    min-width: 0;
+    flex: 1;
+    padding: 7px 8px;
+  }
+
+  .hud-score-card {
+    min-width: 0;
+    gap: 7px;
+  }
+
+  .player-portrait {
+    width: 52px;
+    height: 52px;
+  }
+
+  .hud-card strong {
+    font-size: 1rem;
+  }
+
+  .score-stack #score {
+    font-size: 1.15rem;
+  }
+
+  .touch-ui {
+    display: block;
+  }
+
+  .panel {
+    padding: 16px;
+    max-width: 96vw;
+  }
+}

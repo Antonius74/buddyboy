@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEXI IT - 8 Ore di Sopravvivenza</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <canvas id="game" aria-label="Gioco di sopravvivenza in ufficio"></canvas>
+
+      <section id="hud" class="hud" aria-live="polite">
+        <div class="hud-card">
+          <span class="label">Energia</span>
+          <strong id="energy">10/10</strong>
+        </div>
+        <div class="hud-card">
+          <span class="label">Turno</span>
+          <strong id="time">09:00</strong>
+        </div>
+        <div class="hud-card hud-score-card">
+          <canvas id="player-portrait" class="player-portrait" width="64" height="64" aria-hidden="true"></canvas>
+          <div class="score-stack">
+            <span id="player-name-hud" class="label">Giocatore</span>
+            <strong id="score">0</strong>
+          </div>
+        </div>
+      </section>
+
+      <button id="music-toggle" class="music-toggle" type="button">MUSICA: OFF</button>
+
+      <section id="state-overlay" class="state-overlay visible">
+        <div class="panel">
+          <p class="kicker">Satira ufficio IT</p>
+          <h1>NEXI RUNNER: SHIFT MODE</h1>
+          <p>
+            Fuggi in orizzontale fino alla fine del quadro: da 09:00 a 17:00.
+            Energia iniziale 10, ogni impatto toglie 1.
+          </p>
+          <p>
+            Nemici: capi cattivi, colleghi sgambetto, videocall infinite,
+            nuove mail, war room in produzione, attacchi hacker,
+            budget, commerciali e clienti.
+          </p>
+          <p>Finale quadro: compare il BIG BOSS (gigante) e devi abbatterlo per completare il turno.</p>
+          <p>Elimina i nemici sparando MAIL o RIUNIONI: ogni eliminazione vale punti.</p>
+          <div class="setup-wrap">
+            <label for="player-name-input">Nome personaggio</label>
+            <input id="player-name-input" type="text" maxlength="18" value="Alex" />
+            <div class="gender-pick">
+              <button id="gender-male-btn" class="gender-btn active" data-gender="male" type="button">Uomo</button>
+              <button id="gender-female-btn" class="gender-btn" data-gender="female" type="button">Donna</button>
+            </div>
+          </div>
+          <p class="controls">
+            A/D o frecce: muovi · W/Freccia su: salta · Spazio/Clic: spara · Q: cambia colpo · Salta su collega/capo per eliminarli · Shift: scatto
+          </p>
+          <button id="start-btn" type="button">Inizia il turno</button>
+        </div>
+      </section>
+
+      <section id="touch-ui" class="touch-ui" aria-hidden="true">
+        <div id="touch-pad" class="touch-pad">
+          <div id="touch-knob" class="touch-knob"></div>
+        </div>
+        <button id="touch-jump" type="button" class="touch-jump">SALTA</button>
+        <button id="touch-attack" type="button" class="touch-attack">SPARA</button>
+      </section>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>
