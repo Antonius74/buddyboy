@@ -30,6 +30,7 @@ body {
   color: var(--text);
   background: radial-gradient(circle at 15% 15%, var(--bg-accent), var(--bg-mid) 40%, var(--bg-deep));
   overscroll-behavior: none;
+  touch-action: manipulation;
 }
 
 .app-shell {
@@ -341,6 +342,11 @@ body {
   color: #06202f;
   background: linear-gradient(120deg, #77f8bb, #4bd4ff);
   cursor: pointer;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 #start-btn:active {
@@ -515,7 +521,7 @@ body {
 
 @media (max-width: 640px) {
   .hud {
-    right: calc(8px + var(--safe-right));
+    right: calc(118px + var(--safe-right));
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
@@ -527,16 +533,26 @@ body {
   }
 
   .music-toggle {
-    top: auto;
-    bottom: calc(124px + var(--safe-bottom));
+    top: calc(8px + var(--safe-top));
+    bottom: auto;
     right: calc(8px + var(--safe-right));
     width: 108px;
   }
 
   .weapon-toggle {
-    top: auto;
-    bottom: calc(82px + var(--safe-bottom));
+    top: calc(40px + var(--safe-top));
+    bottom: auto;
     right: calc(8px + var(--safe-right));
     width: 108px;
+  }
+
+  .touch-attack {
+    right: calc(10px + var(--safe-right));
+    bottom: calc(10px + var(--safe-bottom));
+  }
+
+  .touch-jump {
+    right: calc(90px + var(--safe-right));
+    bottom: calc(88px + var(--safe-bottom));
   }
 }

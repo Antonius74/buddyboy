@@ -456,6 +456,7 @@
       audio.loop = true;
       audio.preload = "auto";
       audio.volume = 0.42;
+      audio.playsInline = true;
       musicState.externalAudio = audio;
 
       audio.addEventListener("canplaythrough", () => {
@@ -495,6 +496,30 @@
       musicState.context.resume().catch(() => {});
     }
     return musicState.context;
+  }
+
+  function unlockAudioFromGesture() {
+    const ctxAudio = ensureAudioContext();
+    if (ctxAudio) {
+      if (ctxAudio.state === "suspended" || ctxAudio.state === "interrupted") {
+        ctxAudio.resume().catch(() => {});
+      }
+
+      // iOS/Safari often needs a short gesture-driven sound to fully unlock output.
+      try {
+        const osc = ctxAudio.createOscillator();
+        const gain = ctxAudio.createGain();
+        const now = ctxAudio.currentTime;
+        gain.gain.setValueAtTime(0.0001, now);
+        osc.frequency.setValueAtTime(220, now);
+        osc.connect(gain);
+        gain.connect(ctxAudio.destination);
+        osc.start(now);
+        osc.stop(now + 0.015);
+      } catch {
+        // Ignore unlock glitches: we'll still try normal playback.
+      }
+    }
   }
 
   function playChipVoice(ctxAudio, freq, duration, wave, gainValue, startAt = null) {
@@ -570,6 +595,7 @@
     const ctxAudio = ensureAudioContext();
     if (!ctxAudio) return;
     if (musicState.timer) return;
+    const gainScale = 1.55;
 
     musicState.usingFallback = true;
     musicState.step = 0;
@@ -588,28 +614,28 @@
       const barPos = localStep % 8;
 
       if (lead !== null) {
-        playChipVoice(ctxAudio, midiToFreq(lead), 0.13, "triangle", 0.05);
+        playChipVoice(ctxAudio, midiToFreq(lead), 0.13, "triangle", 0.05 * gainScale);
       }
       if (bass !== null) {
-        playChipVoice(ctxAudio, midiToFreq(bass), 0.19, "sine", 0.036);
+        playChipVoice(ctxAudio, midiToFreq(bass), 0.19, "sine", 0.036 * gainScale);
       }
 
       if (lead !== null && barPos % 2 === 1) {
         const arpShift = CHIP_ARP_STEPS[barPos % CHIP_ARP_STEPS.length];
-        playChipVoice(ctxAudio, midiToFreq(lead + arpShift / 2), 0.065, "square", 0.012);
+        playChipVoice(ctxAudio, midiToFreq(lead + arpShift / 2), 0.065, "square", 0.012 * gainScale);
       }
 
       if (barPos === 0) {
         const chord = chordPattern[chordIndex];
         for (const note of chord) {
-          playChipVoice(ctxAudio, midiToFreq(note), 0.63, "triangle", 0.017);
+          playChipVoice(ctxAudio, midiToFreq(note), 0.63, "triangle", 0.017 * gainScale);
         }
       }
 
       // Gentle rhythm layer
-      playChipVoice(ctxAudio, 1450 + (barPos % 2) * 130, 0.02, "square", 0.0045);
+      playChipVoice(ctxAudio, 1450 + (barPos % 2) * 130, 0.02, "square", 0.0045 * gainScale);
       if (barPos === 0 || barPos === 4) {
-        playChipVoice(ctxAudio, 92, 0.09, "sine", 0.02);
+        playChipVoice(ctxAudio, 92, 0.09, "sine", 0.02 * gainScale);
       }
 
       musicState.step += 1;
@@ -633,8 +659,29 @@
       return;
     }
 
-    if (musicState.externalAudio) {
-      musicState.externalAudio.pause();
+    unlockAudioFromGesture();
+
+    if (musicState.externalAudio && musicState.externalReady) {
+      stopFallbackMusic();
+      const audio = musicState.externalAudio;
+      audio.loop = true;
+      audio.volume = 0.42;
+
+      const playAttempt = audio.play();
+      if (playAttempt && typeof playAttempt.then === "function") {
+        playAttempt
+          .then(() => {
+            musicState.usingFallback = false;
+            updateMusicButton();
+          })
+          .catch(() => {
+            startFallbackMusic();
+          });
+      } else {
+        musicState.usingFallback = false;
+        updateMusicButton();
+      }
+      return;
     }
 
     startFallbackMusic();
@@ -1107,7 +1154,25 @@
     resetGame();
     gameState = "playing";
     overlay.classList.remove("visible");
+    unlockAudioFromGesture();
     playMusic();
+  }
+
+  function bindStartButton(button) {
+    if (!button) return;
+
+    let triggered = false;
+    const activate = (event) => {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      if (triggered) return;
+      triggered = true;
+      startGame();
+    };
+
+    button.addEventListener("click", activate);
+    button.addEventListener("pointerup", activate);
+    button.addEventListener("touchend", activate, { passive: false });
   }
 
   function finishGame(win) {
@@ -1135,7 +1200,7 @@
     `;
 
     const button = document.getElementById("start-btn");
-    button?.addEventListener("click", startGame);
+    bindStartButton(button);
 
     overlay.classList.add("visible");
   }
@@ -3354,12 +3419,14 @@
   canvas.addEventListener("pointerdown", (event) => {
     if (gameState !== "playing") return;
     event.preventDefault();
+    unlockAudioFromGesture();
     attackQueued = true;
   });
 
   touchPad.addEventListener("pointerdown", (event) => {
     if (gameState !== "playing") return;
 
+    unlockAudioFromGesture();
     touchMove.active = true;
     touchMove.pointerId = event.pointerId;
     touchPad.setPointerCapture(event.pointerId);
@@ -3388,6 +3455,7 @@
   touchAttack.addEventListener("pointerdown", (event) => {
     if (gameState !== "playing") return;
 
+    unlockAudioFromGesture();
     touchAttackState.active = true;
     touchAttackState.pointerId = event.pointerId;
     touchAttack.setPointerCapture(event.pointerId);
@@ -3413,6 +3481,7 @@
   touchJump?.addEventListener("pointerdown", (event) => {
     if (gameState !== "playing") return;
 
+    unlockAudioFromGesture();
     touchJumpState.active = true;
     touchJumpState.pointerId = event.pointerId;
     touchJump.setPointerCapture(event.pointerId);
@@ -3467,8 +3536,33 @@
     touchKnob.style.transform = "translate(0px, 0px)";
   }
 
-  document.getElementById("start-btn")?.addEventListener("click", startGame);
-  musicToggleBtn?.addEventListener("click", () => toggleMusic());
+  let lastTouchEndTs = 0;
+  document.addEventListener(
+    "touchend",
+    (event) => {
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest("input, textarea, select, [contenteditable='true']")
+      ) {
+        lastTouchEndTs = performance.now();
+        return;
+      }
+
+      const now = performance.now();
+      if (now - lastTouchEndTs < 320) {
+        event.preventDefault();
+      }
+      lastTouchEndTs = now;
+    },
+    { passive: false }
+  );
+
+  bindStartButton(document.getElementById("start-btn"));
+  musicToggleBtn?.addEventListener("click", () => {
+    unlockAudioFromGesture();
+    toggleMusic();
+  });
   weaponToggleBtn?.addEventListener("click", () => cycleWeaponMode(true));
   genderMaleBtn?.addEventListener("click", () => setPlayerGender("male"));
   genderFemaleBtn?.addEventListener("click", () => setPlayerGender("female"));
