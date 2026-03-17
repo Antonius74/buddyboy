@@ -6,6 +6,7 @@
 
   const energyEl = document.getElementById("energy");
   const timeEl = document.getElementById("time");
+  const difficultyHudEl = document.getElementById("difficulty-hud");
   const scoreEl = document.getElementById("score");
   const playerNameHudEl = document.getElementById("player-name-hud");
   const playerPortraitCanvas = document.getElementById("player-portrait");
@@ -14,13 +15,18 @@
   const overlay = document.getElementById("state-overlay");
   const panel = overlay.querySelector(".panel");
   const nameInputEl = document.getElementById("player-name-input");
+  const difficultySelectEl = document.getElementById("difficulty-select");
+  const serverLeaderboardTopEl = document.getElementById("server-leaderboard-top");
+  const serverLeaderboardStatusEl = document.getElementById("server-leaderboard-status");
   const genderMaleBtn = document.getElementById("gender-male-btn");
   const genderFemaleBtn = document.getElementById("gender-female-btn");
   const enemyLabelInputs = {
     boss: document.getElementById("enemy-boss-input"),
-    commercial: document.getElementById("enemy-commercial-input"),
+    bigBoss: document.getElementById("enemy-bigboss-input"),
+    colleague1: document.getElementById("enemy-colleague-1-input"),
+    colleague2: document.getElementById("enemy-colleague-2-input"),
+    colleague3: document.getElementById("enemy-colleague-3-input"),
     client: document.getElementById("enemy-client-input"),
-    colleague: document.getElementById("enemy-colleague-input"),
   };
 
   const touchUI = document.getElementById("touch-ui");
@@ -37,6 +43,20 @@
   const MAX_ENERGY = 10;
   const GRAVITY = 1650;
   const MUSIC_FILE = "assets/buggyboy-amiga500.ogg";
+  const PLAYER_NAME_COOKIE = "buddyboy_player_name";
+  const PLAYER_ID_COOKIE = "buddyboy_player_id";
+  const COOKIE_DAYS = 365;
+  const API_URL_PARAM = new URLSearchParams(window.location.search).get("api");
+  const SERVER_API_BASE = (API_URL_PARAM || window.BUDDYBOY_API_BASE || "/api")
+    .replace(/\/+$/, "");
+  const SERVER_REQUEST_TIMEOUT_MS = 1800;
+  const DIFFICULTY_LEVELS = {
+    1: { label: "1 - Facile", speedMul: 0.9, hpMul: 0.9, spawnMul: 0.82, scoreMul: 0.9, cooldownMul: 1.08 },
+    2: { label: "2 - Standard", speedMul: 1, hpMul: 1, spawnMul: 1, scoreMul: 1, cooldownMul: 1 },
+    3: { label: "3 - Intensa", speedMul: 1.12, hpMul: 1.12, spawnMul: 1.12, scoreMul: 1.12, cooldownMul: 0.94 },
+    4: { label: "4 - Hardcore", speedMul: 1.24, hpMul: 1.24, spawnMul: 1.28, scoreMul: 1.28, cooldownMul: 0.88 },
+    5: { label: "5 - Nightmare", speedMul: 1.38, hpMul: 1.38, spawnMul: 1.45, scoreMul: 1.45, cooldownMul: 0.8 },
+  };
   const CHIP_STEP_MS = 155;
   const CHIP_LEAD_PATTERN_A = [
     72, 74, 76, 79, 76, 74, 72, null,
@@ -88,9 +108,17 @@
     budget: { w: 64, h: 56, speed: 92, hp: 3, points: 300, label: "BUDGET" },
     warroom: { w: 76, h: 70, speed: 0, hp: 2, points: 260, label: "WAR ROOM", hazard: true },
   };
+  const ENEMY_LABEL_FALLBACKS = {
+    colleague1: "COLLEGA 1",
+    colleague2: "COLLEGA 2",
+    colleague3: "COLLEGA 3",
+  };
   const enemyLabelProfile = {};
   for (const type in ENEMY_RULES) {
     enemyLabelProfile[type] = ENEMY_RULES[type].label;
+  }
+  for (const type in ENEMY_LABEL_FALLBACKS) {
+    enemyLabelProfile[type] = ENEMY_LABEL_FALLBACKS[type];
   }
 
   const PROJECTILE_STYLES = {
@@ -144,6 +172,11 @@
     name: "Antz",
     gender: "male",
   };
+  let difficultyLevel = 3;
+  let playerServerId = "";
+  let serverApiOnline = false;
+  let serverApiRetryAt = 0;
+  let cachedTopPlayer = null;
 
   let lastFrame = performance.now();
 
@@ -233,6 +266,253 @@
     return cleaned.slice(0, 24) || fallback;
   }
 
+  function readCookie(name) {
+    const key = `${name}=`;
+    const chunks = document.cookie ? document.cookie.split(";") : [];
+
+    for (const rawChunk of chunks) {
+      const chunk = rawChunk.trim();
+      if (!chunk.startsWith(key)) continue;
+      try {
+        return decodeURIComponent(chunk.slice(key.length));
+      } catch {
+        return chunk.slice(key.length);
+      }
+    }
+
+    return "";
+  }
+
+  function writeCookie(name, value, days = COOKIE_DAYS) {
+    const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
+    const encoded = encodeURIComponent(String(value ?? ""));
+    document.cookie = `${name}=${encoded}; expires=${expires}; path=/; SameSite=Lax`;
+  }
+
+  function createPlayerId() {
+    if (window.crypto && typeof window.crypto.randomUUID === "function") {
+      return window.crypto.randomUUID();
+    }
+    const rand = Math.random().toString(36).slice(2, 11);
+    return `p-${Date.now().toString(36)}-${rand}`;
+  }
+
+  function ensurePlayerServerId() {
+    const existing = readCookie(PLAYER_ID_COOKIE).trim();
+    if (existing) return existing;
+
+    const created = createPlayerId();
+    writeCookie(PLAYER_ID_COOKIE, created);
+    return created;
+  }
+
+  function rememberPlayerName() {
+    const safeName = sanitizePlayerName(playerProfile.name);
+    playerProfile.name = safeName;
+    writeCookie(PLAYER_NAME_COOKIE, safeName);
+  }
+
+  function loadRememberedPlayerName() {
+    const savedName = sanitizePlayerName(readCookie(PLAYER_NAME_COOKIE), "");
+    if (!savedName) return;
+    playerProfile.name = savedName;
+    if (nameInputEl) {
+      nameInputEl.value = savedName;
+    }
+  }
+
+  function getDifficultyConfig() {
+    return DIFFICULTY_LEVELS[difficultyLevel] || DIFFICULTY_LEVELS[3];
+  }
+
+  function setDifficultyLevel(rawLevel) {
+    const parsed = Number.parseInt(rawLevel, 10);
+    const normalized = clamp(Number.isFinite(parsed) ? parsed : 3, 1, 5);
+    difficultyLevel = normalized;
+
+    if (difficultySelectEl && String(difficultySelectEl.value) !== String(normalized)) {
+      difficultySelectEl.value = String(normalized);
+    }
+    if (difficultyHudEl) {
+      difficultyHudEl.textContent = `${difficultyLevel}/5`;
+    }
+  }
+
+  function applyDifficultyFromSetup() {
+    const selected = difficultySelectEl ? difficultySelectEl.value : difficultyLevel;
+    setDifficultyLevel(selected);
+  }
+
+  function getTopPlayerText(topPlayer) {
+    if (!topPlayer || !topPlayer.name) {
+      return "Nessun record server disponibile.";
+    }
+
+    const topName = sanitizePlayerName(topPlayer.name, "Player");
+    const topScore = Number.isFinite(topPlayer.bestScore) ? Math.max(0, Math.round(topPlayer.bestScore)) : 0;
+    const topDifficulty = clamp(
+      Number.parseInt(topPlayer.bestDifficulty, 10) || 1,
+      1,
+      5
+    );
+    return `${topName} • ${topScore} pt • Difficolta ${topDifficulty}/5`;
+  }
+
+  function setServerBoardStatus(message, tone = "info") {
+    if (!serverLeaderboardStatusEl || !serverLeaderboardStatusEl.isConnected) return;
+
+    const colorMap = {
+      info: "#b7e9ff",
+      ok: "#8df3bf",
+      warn: "#ffd8a3",
+      error: "#ff9f8e",
+    };
+
+    serverLeaderboardStatusEl.textContent = message;
+    serverLeaderboardStatusEl.style.color = colorMap[tone] || colorMap.info;
+  }
+
+  function renderTopPlayer(topPlayer) {
+    cachedTopPlayer = topPlayer || null;
+    if (!serverLeaderboardTopEl || !serverLeaderboardTopEl.isConnected) return;
+    serverLeaderboardTopEl.textContent = getTopPlayerText(cachedTopPlayer);
+  }
+
+  async function fetchJsonWithTimeout(url, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), SERVER_REQUEST_TIMEOUT_MS);
+
+    try {
+      const requestOptions = { ...options, signal: controller.signal };
+      requestOptions.headers = {
+        Accept: "application/json",
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...(options.headers || {}),
+      };
+
+      const response = await fetch(url, requestOptions);
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        const message =
+          (payload && (payload.error || payload.message)) ||
+          `Errore API (${response.status})`;
+        const error = new Error(message);
+        error.status = response.status;
+        error.payload = payload;
+        throw error;
+      }
+
+      return payload || {};
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  async function refreshServerLeaderboard() {
+    if (!serverLeaderboardTopEl || !serverLeaderboardStatusEl) return null;
+
+    setServerBoardStatus("Caricamento classifica server...", "info");
+
+    try {
+      const data = await fetchJsonWithTimeout(`${SERVER_API_BASE}/leaderboard`, {
+        method: "GET",
+        cache: "no-store",
+      });
+      serverApiOnline = true;
+      serverApiRetryAt = 0;
+      renderTopPlayer(data.topPlayer || null);
+      setServerBoardStatus("Server online: nomi univoci e classifica attivi.", "ok");
+      return data;
+    } catch (error) {
+      serverApiOnline = false;
+      serverApiRetryAt = Date.now() + 10000;
+      renderTopPlayer(null);
+      setServerBoardStatus(
+        "Server classifica non raggiungibile: su GitHub Pages serve un backend esterno.",
+        "warn"
+      );
+      return null;
+    }
+  }
+
+  async function registerPlayerNameOnServer() {
+    if (Date.now() < serverApiRetryAt) {
+      return { ok: true, duplicate: false, offline: true };
+    }
+
+    const payload = {
+      name: sanitizePlayerName(playerProfile.name),
+      playerId: playerServerId,
+    };
+
+    try {
+      const data = await fetchJsonWithTimeout(`${SERVER_API_BASE}/register`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      serverApiOnline = true;
+      serverApiRetryAt = 0;
+      const canonicalName = sanitizePlayerName(data.player?.name || payload.name);
+      playerProfile.name = canonicalName;
+      if (nameInputEl) {
+        nameInputEl.value = canonicalName;
+      }
+      renderTopPlayer(data.topPlayer || cachedTopPlayer);
+      setServerBoardStatus("Nome registrato sul server.", "ok");
+      rememberPlayerName();
+      return { ok: true, duplicate: false };
+    } catch (error) {
+      if (error.status === 409) {
+        const msg = error?.payload?.error || "Nome gia presente in classifica: scegline un altro.";
+        setServerBoardStatus(msg, "error");
+        return { ok: false, duplicate: true };
+      }
+
+      serverApiOnline = false;
+      serverApiRetryAt = Date.now() + 10000;
+      setServerBoardStatus(
+        "Server non disponibile ora: avvio in locale senza controllo nomi.",
+        "warn"
+      );
+      return { ok: true, duplicate: false, offline: true };
+    }
+  }
+
+  async function submitScoreOnServer(win) {
+    if (!playerServerId) return;
+    if (Date.now() < serverApiRetryAt) return;
+
+    try {
+      const data = await fetchJsonWithTimeout(`${SERVER_API_BASE}/score`, {
+        method: "POST",
+        body: JSON.stringify({
+          playerId: playerServerId,
+          name: playerProfile.name,
+          score,
+          difficulty: difficultyLevel,
+          won: Boolean(win),
+        }),
+      });
+
+      serverApiOnline = true;
+      serverApiRetryAt = 0;
+      renderTopPlayer(data.topPlayer || cachedTopPlayer);
+      if (win) {
+        setServerBoardStatus("Punteggio salvato sul server.", "ok");
+      }
+    } catch {
+      serverApiOnline = false;
+      serverApiRetryAt = Date.now() + 10000;
+    }
+  }
+
   function getPlayerLook() {
     return PLAYER_LOOKS[playerProfile.gender] || PLAYER_LOOKS.male;
   }
@@ -254,6 +534,7 @@
       playerProfile.name = sanitizePlayerName(nameInputEl.value);
       nameInputEl.value = playerProfile.name;
     }
+    applyDifficultyFromSetup();
     applyEnemyLabelsFromSetup();
     refreshGenderButtons();
   }
@@ -261,7 +542,7 @@
   function applyEnemyLabelsFromSetup() {
     for (const type in enemyLabelInputs) {
       const inputEl = enemyLabelInputs[type];
-      const fallback = ENEMY_RULES[type]?.label || type.toUpperCase();
+      const fallback = getEnemyLabelFallback(type);
 
       if (!inputEl) {
         enemyLabelProfile[type] = sanitizeEnemyLabel(enemyLabelProfile[type], fallback);
@@ -274,8 +555,24 @@
     }
   }
 
+  function getEnemyLabelFallback(type) {
+    return ENEMY_LABEL_FALLBACKS[type] || ENEMY_RULES[type]?.label || type.toUpperCase();
+  }
+
+  function getColleagueNamePool() {
+    return ["colleague1", "colleague2", "colleague3"].map((slot) =>
+      sanitizeEnemyLabel(enemyLabelProfile[slot], getEnemyLabelFallback(slot))
+    );
+  }
+
+  function pickColleagueName() {
+    const pool = getColleagueNamePool();
+    if (!pool.length) return "COLLEGA";
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
   function getEnemyLabel(type) {
-    const fallback = ENEMY_RULES[type]?.label || type.toUpperCase();
+    const fallback = getEnemyLabelFallback(type);
     return sanitizeEnemyLabel(enemyLabelProfile[type], fallback);
   }
 
@@ -917,7 +1214,8 @@
     camera.shakeX = 0;
     camera.shakeY = 0;
 
-    spawnDirector.cooldown = 0.65;
+    const diff = getDifficultyConfig();
+    spawnDirector.cooldown = Math.max(0.35, 0.65 / diff.spawnMul);
     spawnDirector.nextSide = Math.random() < 0.5 ? -1 : 1;
 
     updateHud();
@@ -925,15 +1223,20 @@
 
   function buildEnemies() {
     const list = [];
+    const diff = getDifficultyConfig();
 
-    for (let x = 640; x < level.finishX - 620; x += 220 + Math.random() * 220) {
-      if (Math.random() < 0.14) continue;
+    for (
+      let x = 640;
+      x < level.finishX - 620;
+      x += Math.max(120, (220 + Math.random() * 220) / diff.spawnMul)
+    ) {
+      if (Math.random() < 0.14 / diff.spawnMul) continue;
 
       const progress = clamp((x - level.startX) / (level.finishX - level.startX), 0, 1);
       const type = pickEnemyType(progress);
       list.push(createEnemy(type, x));
 
-      if (Math.random() < 0.1) {
+      if (Math.random() < 0.1 * diff.spawnMul) {
         list.push(createEnemy("mail", x + 60 + Math.random() * 40));
       }
     }
@@ -957,7 +1260,10 @@
 
   function createEnemy(type, x) {
     const rule = ENEMY_RULES[type];
+    const diff = getDifficultyConfig();
     const useHigh = Math.random() < 0.28;
+    const speed = rule.speed * diff.speedMul;
+    const hp = Math.max(1, Math.round(rule.hp * diff.hpMul));
 
     let y;
     if (type === "mail") {
@@ -975,21 +1281,24 @@
       y,
       w: rule.w,
       h: rule.h,
-      vx: (Math.random() < 0.5 ? -1 : 1) * rule.speed * 0.2,
+      vx: (Math.random() < 0.5 ? -1 : 1) * speed * 0.2,
       vy: 0,
-      hp: rule.hp,
-      maxHp: rule.hp,
-      speed: rule.speed,
+      hp,
+      maxHp: hp,
+      speed,
       points: rule.points,
-      label: getEnemyLabel(type),
+      label:
+        type === "commercial" || type === "colleague"
+          ? pickColleagueName()
+          : getEnemyLabel(type),
       airborne: Boolean(rule.airborne),
       hazard: Boolean(rule.hazard),
       state: "alive",
       stun: 0,
       defeatTimer: 0,
       hitCooldown: 0,
-      shotCooldown: 0.9 + Math.random() * 1.6,
-      specialCooldown: 1.1 + Math.random() * 2.2,
+      shotCooldown: (0.9 + Math.random() * 1.6) * diff.cooldownMul,
+      specialCooldown: (1.1 + Math.random() * 2.2) * diff.cooldownMul,
       spawnX: x,
       patrolMin: x - (90 + Math.random() * 90),
       patrolMax: x + (90 + Math.random() * 90),
@@ -1059,15 +1368,19 @@
   function updateEnemySpawns(dt) {
     if (finalBossSpawned && !finalBossDefeated) return;
 
+    const diff = getDifficultyConfig();
     spawnDirector.cooldown -= dt;
     if (spawnDirector.cooldown > 0) return;
 
     const progress = getProgress();
     const nearby = countNearbyEnemies(980);
-    const nearbyTarget = 4 + Math.floor(progress * 3);
+    const nearbyTarget = Math.max(3, Math.round((4 + Math.floor(progress * 3)) * diff.spawnMul));
 
     if (nearby >= nearbyTarget) {
-      spawnDirector.cooldown = 0.25 + Math.random() * 0.4;
+      spawnDirector.cooldown = Math.max(
+        0.18,
+        (0.25 + Math.random() * 0.4) / diff.spawnMul
+      );
       return;
     }
 
@@ -1075,12 +1388,16 @@
     const spawned = spawnEnemyFromSide(primarySide);
     spawnDirector.nextSide *= -1;
 
-    if (spawned && Math.random() < 0.08 + progress * 0.1) {
+    const extraSpawnChance = clamp((0.08 + progress * 0.1) * diff.spawnMul, 0, 0.9);
+    if (spawned && Math.random() < extraSpawnChance) {
       spawnEnemyFromSide(-primarySide);
     }
 
-    const baseCooldown = 1.2 - progress * 0.35;
-    spawnDirector.cooldown = Math.max(0.55, baseCooldown + Math.random() * 0.75);
+    const baseCooldown = (1.2 - progress * 0.35) / diff.spawnMul;
+    spawnDirector.cooldown = Math.max(
+      0.35,
+      baseCooldown + (Math.random() * 0.75) / diff.spawnMul
+    );
   }
 
   function spawnFinalBossIfNeeded(force = false) {
@@ -1098,12 +1415,13 @@
     });
 
     const boss = createEnemy("bigBoss", x);
+    const diff = getDifficultyConfig();
     boss.dir = -1;
     boss.patrolMin = x - 210;
     boss.patrolMax = x + 120;
     boss.hitCooldown = 1.1;
-    boss.shotCooldown = 1.4;
-    boss.specialCooldown = 1;
+    boss.shotCooldown = 1.4 * diff.cooldownMul;
+    boss.specialCooldown = 1 * diff.cooldownMul;
     enemies.push(boss);
 
     finalBossSpawned = true;
@@ -1149,17 +1467,31 @@
     return highest;
   }
 
-  function startGame() {
+  async function startGame() {
     applyProfileFromSetup();
+    rememberPlayerName();
+    if (!playerServerId) {
+      playerServerId = ensurePlayerServerId();
+    }
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
+
+    const registration = await registerPlayerNameOnServer();
+    if (!registration.ok && registration.duplicate) {
+      if (nameInputEl && nameInputEl.isConnected) {
+        nameInputEl.focus();
+      }
+      return false;
+    }
+
     resetGame();
     gameState = "playing";
     document.body.classList.add("playing-mode");
     overlay.classList.remove("visible");
     unlockAudioFromGesture();
     playMusic();
+    return true;
   }
 
   function bindStartButton(button) {
@@ -1171,7 +1503,15 @@
       event?.stopPropagation?.();
       if (triggered) return;
       triggered = true;
-      startGame();
+      Promise.resolve(startGame())
+        .then((started) => {
+          if (!started) {
+            triggered = false;
+          }
+        })
+        .catch(() => {
+          triggered = false;
+        });
     };
 
     button.addEventListener("click", activate);
@@ -1182,6 +1522,7 @@
   function finishGame(win) {
     gameState = win ? "won" : "lost";
     document.body.classList.remove("playing-mode");
+    void submitScoreOnServer(win);
 
     if (win) {
       playSfxWinJingle();
@@ -1199,6 +1540,7 @@
       <h1>${title}</h1>
       <p>Giocatore: <strong>${playerProfile.name}</strong></p>
       <p>${subtitle}</p>
+      <p>Difficolta: <strong>${difficultyLevel}/5</strong></p>
       <p>Punti totali: <strong>${score}</strong></p>
       <p class="controls">Premi il pulsante per ripartire.</p>
       <button id="start-btn" type="button">${win ? "Nuovo quadro" : "Riprova"}</button>
@@ -1384,13 +1726,14 @@
   }
 
   function addScore(points, x, y) {
-    score += points;
+    const scaledPoints = Math.max(1, Math.round(points * getDifficultyConfig().scoreMul));
+    score += scaledPoints;
     popups.push({
       x,
       y,
       vy: -34,
       ttl: 0.95,
-      text: `+${points}`,
+      text: `+${scaledPoints}`,
       color: "#ffe286",
     });
   }
@@ -1530,6 +1873,7 @@
     const dx = playerCenter - enemyCenter;
     const dirToPlayer = dx >= 0 ? 1 : -1;
     const absDx = Math.abs(dx);
+    const cooldownMul = getDifficultyConfig().cooldownMul;
 
     if (enemy.type === "bigBoss") {
       enemy.specialCooldown -= dt;
@@ -1548,7 +1892,7 @@
 
       if (enemy.specialCooldown <= 0 && enemy.onGround) {
         enemy.vy = -340;
-        enemy.specialCooldown = 1.15 + Math.random() * 0.85;
+        enemy.specialCooldown = (1.15 + Math.random() * 0.85) * cooldownMul;
       }
 
       if (enemy.shotCooldown <= 0 && absDx < 860) {
@@ -1558,7 +1902,7 @@
 
         spawnProjectile(mouthX, mouthY, dir * 270, -50, "packet");
         spawnProjectile(mouthX, mouthY + 22, dir * 235, -15, "packet");
-        enemy.shotCooldown = 1.25 + Math.random() * 0.9;
+        enemy.shotCooldown = (1.25 + Math.random() * 0.9) * cooldownMul;
       }
       return;
     }
@@ -1581,7 +1925,7 @@
         if (enemy.specialCooldown <= 0) {
           enemy.vx = enemy.dir * (enemy.speed + 185);
           enemy.vy = -200;
-          enemy.specialCooldown = 1.7 + Math.random() * 1.1;
+          enemy.specialCooldown = (1.7 + Math.random() * 1.1) * cooldownMul;
         } else {
           enemy.vx = enemy.dir * (enemy.speed + 22);
         }
@@ -1600,7 +1944,7 @@
         if (enemy.specialCooldown <= 0) {
           enemy.vx = enemy.dir * (enemy.speed + 170);
           enemy.vy = -220;
-          enemy.specialCooldown = 1.2 + Math.random() * 0.95;
+          enemy.specialCooldown = (1.2 + Math.random() * 0.95) * cooldownMul;
         } else {
           enemy.vx = enemy.dir * (enemy.speed + 35);
         }
@@ -1628,7 +1972,7 @@
           -35 + (Math.random() * 24 - 12),
           "invite"
         );
-        enemy.specialCooldown = 2 + Math.random() * 1.2;
+        enemy.specialCooldown = (2 + Math.random() * 1.2) * cooldownMul;
       }
       return;
     }
@@ -1650,7 +1994,7 @@
           -45,
           "invite"
         );
-        enemy.specialCooldown = 2.2 + Math.random() * 1.1;
+        enemy.specialCooldown = (2.2 + Math.random() * 1.1) * cooldownMul;
       }
       return;
     }
@@ -1682,7 +2026,7 @@
           -10 + (Math.random() * 40 - 20),
           "packet"
         );
-        enemy.shotCooldown = 1 + Math.random() * 1.2;
+        enemy.shotCooldown = (1 + Math.random() * 1.2) * cooldownMul;
       }
       return;
     }
@@ -1698,7 +2042,7 @@
       }
 
       if (enemy.specialCooldown <= 0) {
-        enemy.specialCooldown = 1.2 + Math.random() * 1.6;
+        enemy.specialCooldown = (1.2 + Math.random() * 1.6) * cooldownMul;
       }
       return;
     }
@@ -2029,6 +2373,9 @@
 
     timeEl.textContent = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
     scoreEl.textContent = `${score}`;
+    if (difficultyHudEl) {
+      difficultyHudEl.textContent = `${difficultyLevel}/5`;
+    }
     if (playerNameHudEl) {
       playerNameHudEl.textContent = playerProfile.name;
     }
@@ -3648,6 +3995,12 @@
   nameInputEl?.addEventListener("blur", () => {
     playerProfile.name = sanitizePlayerName(nameInputEl.value);
     nameInputEl.value = playerProfile.name;
+    rememberPlayerName();
+    updateHud();
+  });
+
+  difficultySelectEl?.addEventListener("change", () => {
+    applyDifficultyFromSetup();
     updateHud();
   });
 
@@ -3655,7 +4008,7 @@
     const inputEl = enemyLabelInputs[type];
     if (!inputEl) continue;
 
-    const fallback = ENEMY_RULES[type]?.label || type.toUpperCase();
+    const fallback = getEnemyLabelFallback(type);
     inputEl.value = enemyLabelProfile[type] || fallback;
 
     inputEl.addEventListener("input", () => {
@@ -3675,6 +4028,11 @@
     });
   }
 
+  loadRememberedPlayerName();
+  playerServerId = ensurePlayerServerId();
+  setDifficultyLevel(difficultySelectEl ? difficultySelectEl.value : difficultyLevel);
+  rememberPlayerName();
+
   if (nameInputEl) {
     nameInputEl.value = playerProfile.name;
   }
@@ -3685,5 +4043,6 @@
   initMusicSystem();
   resize();
   updateHud();
+  void refreshServerLeaderboard();
   requestAnimationFrame(gameLoop);
 })();

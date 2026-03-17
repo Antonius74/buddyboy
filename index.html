@@ -7,7 +7,7 @@
       content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <title>NEXI IT - 8 Ore di Sopravvivenza</title>
-    <link rel="stylesheet" href="styles.css?v=20260316f" />
+    <link rel="stylesheet" href="styles.css?v=20260317a" />
     <script>
       (() => {
         let lastTouchEnd = 0;
@@ -55,6 +55,10 @@
           <span class="label">Turno</span>
           <strong id="time">09:00</strong>
         </div>
+        <div class="hud-card">
+          <span class="label">Difficoltà</span>
+          <strong id="difficulty-hud">3/5</strong>
+        </div>
         <div class="hud-card hud-score-card">
           <canvas id="player-portrait" class="player-portrait" width="64" height="64" aria-hidden="true"></canvas>
           <div class="score-stack">
@@ -80,6 +84,11 @@
             nuove mail, war room in produzione, attacchi hacker,
             budget, commerciali e clienti.
           </p>
+          <div class="server-board">
+            <p class="server-board-title">Classifica Server</p>
+            <p id="server-leaderboard-top" class="server-board-top">Caricamento classifica...</p>
+            <p id="server-leaderboard-status" class="server-board-status">Controllo nomi duplicati attivo via API server.</p>
+          </div>
           <p>Finale quadro: compare il BIG BOSS (gigante) e devi abbatterlo per completare il turno.</p>
           <p>Elimina i nemici sparando MAIL o RIUNIONI: ogni eliminazione vale punti.</p>
           <div class="setup-wrap">
@@ -89,6 +98,14 @@
               <button id="gender-male-btn" class="gender-btn active" data-gender="male" type="button">Uomo</button>
               <button id="gender-female-btn" class="gender-btn" data-gender="female" type="button">Donna</button>
             </div>
+            <label for="difficulty-select" class="difficulty-label">Difficoltà (1-5)</label>
+            <select id="difficulty-select">
+              <option value="1">1 - Facile</option>
+              <option value="2">2 - Standard</option>
+              <option value="3" selected>3 - Intensa</option>
+              <option value="4">4 - Hardcore</option>
+              <option value="5">5 - Nightmare</option>
+            </select>
 
             <div class="enemy-rename-wrap">
               <p class="enemy-rename-title">Nomi avversari (modificabili)</p>
@@ -96,14 +113,20 @@
                 <label for="enemy-boss-input">Capo</label>
                 <input id="enemy-boss-input" type="text" maxlength="24" value="CAPO" />
 
-                <label for="enemy-commercial-input">Commerciali</label>
-                <input id="enemy-commercial-input" type="text" maxlength="24" value="COMMERCIALI" />
+                <label for="enemy-bigboss-input">Grande capo</label>
+                <input id="enemy-bigboss-input" type="text" maxlength="24" value="BIG BOSS" />
+
+                <label for="enemy-colleague-1-input">Collega 1</label>
+                <input id="enemy-colleague-1-input" type="text" maxlength="24" value="COLLEGA 1" />
+
+                <label for="enemy-colleague-2-input">Collega 2</label>
+                <input id="enemy-colleague-2-input" type="text" maxlength="24" value="COLLEGA 2" />
+
+                <label for="enemy-colleague-3-input">Collega 3</label>
+                <input id="enemy-colleague-3-input" type="text" maxlength="24" value="COLLEGA 3" />
 
                 <label for="enemy-client-input">Clienti</label>
                 <input id="enemy-client-input" type="text" maxlength="24" value="CLIENTI" />
-
-                <label for="enemy-colleague-input">Collega</label>
-                <input id="enemy-colleague-input" type="text" maxlength="24" value="COLLEGA" />
               </div>
             </div>
           </div>
@@ -123,6 +146,6 @@
       </section>
     </main>
 
-    <script src="game.js?v=20260316f"></script>
+    <script src="game.js?v=20260317c"></script>
   </body>
 </html>

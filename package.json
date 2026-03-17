@@ -1,0 +1,7 @@
+{
+  "name": "buddyboy",
+  "private": true,
+  "scripts": {
+    "serve:api": "node server/leaderboard-server.js"
+  }
+}
