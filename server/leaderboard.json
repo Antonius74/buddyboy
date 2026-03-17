@@ -1,5 +1,19 @@
 {
   "version": 1,
-  "updatedAt": "2026-03-17T00:00:00.000Z",
-  "players": []
+  "updatedAt": "2026-03-17T23:29:30.830Z",
+  "players": [
+    {
+      "playerId": "3a94a2eb-7db7-424c-8e97-ed560a1a9179",
+      "name": "Antz",
+      "nameKey": "antz",
+      "bestScore": 11873,
+      "bestDifficulty": 1,
+      "gamesPlayed": 2,
+      "lastScore": 1589,
+      "lastDifficulty": 1,
+      "lastWon": false,
+      "createdAt": "2026-03-17T23:26:37.889Z",
+      "updatedAt": "2026-03-17T23:29:30.830Z"
+    }
+  ]
 }

@@ -146,6 +146,14 @@
       </section>
     </main>
 
-    <script src="game.js?v=20260317c"></script>
+    <script>
+      (() => {
+        // Runtime API config: default backend is Render.
+        if (!window.BUDDYBOY_API_BASE) {
+          window.BUDDYBOY_API_BASE = "https://buddyboy.onrender.com/api";
+        }
+      })();
+    </script>
+    <script src="game.js?v=20260317d"></script>
   </body>
 </html>
