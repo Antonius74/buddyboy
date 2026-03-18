@@ -16,6 +16,8 @@ Di default usa `http://localhost:8787` e salva i dati in `server/leaderboard.jso
 - `POST /api/register` con body JSON `{ "playerId": "...", "name": "..." }`
 - `POST /api/score` con body JSON `{ "playerId": "...", "name": "...", "score": 1234, "difficulty": 3, "won": true }`
 
+I nomi duplicati sono consentiti: l'identita' del giocatore e' gestita da `playerId`.
+
 ## Note deploy
 
 GitHub Pages e' statico: non puo' scrivere file server-side.

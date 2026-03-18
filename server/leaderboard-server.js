@@ -85,15 +85,13 @@ function normalizePlayer(record) {
 function normalizeStore(store) {
   const normalized = createEmptyStore();
   const seenIds = new Set();
-  const seenNames = new Set();
 
   const rawPlayers = Array.isArray(store?.players) ? store.players : [];
   for (const raw of rawPlayers) {
     const player = normalizePlayer(raw);
     if (!player) continue;
-    if (seenIds.has(player.playerId) || seenNames.has(player.nameKey)) continue;
+    if (seenIds.has(player.playerId)) continue;
     seenIds.add(player.playerId);
-    seenNames.add(player.nameKey);
     normalized.players.push(player);
   }
 
@@ -170,16 +168,6 @@ function createHttpError(status, message) {
   return error;
 }
 
-function assertUniqueName(store, requestedNameKey, playerId) {
-  const conflict = store.players.find(
-    (player) => player.nameKey === requestedNameKey && player.playerId !== playerId
-  );
-
-  if (conflict) {
-    throw createHttpError(409, `Nome gia in uso: ${conflict.name}`);
-  }
-}
-
 function upsertPlayer(store, playerId, rawName) {
   const name = sanitizePlayerName(rawName, "");
   if (!name) {
@@ -187,7 +175,6 @@ function upsertPlayer(store, playerId, rawName) {
   }
 
   const normalizedName = nameKey(name);
-  assertUniqueName(store, normalizedName, playerId);
 
   const now = nowIso();
   let player = store.players.find((entry) => entry.playerId === playerId);

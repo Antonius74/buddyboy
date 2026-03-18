@@ -427,7 +427,7 @@
       serverApiOnline = true;
       serverApiRetryAt = 0;
       renderTopPlayer(data.topPlayer || null);
-      setServerBoardStatus("Server online: nomi univoci e classifica attivi.", "ok");
+      setServerBoardStatus("Server online: classifica attiva (nomi uguali consentiti).", "ok");
       return data;
     } catch (error) {
       serverApiOnline = false;
@@ -470,9 +470,11 @@
       return { ok: true, duplicate: false };
     } catch (error) {
       if (error.status === 409) {
-        const msg = error?.payload?.error || "Nome gia presente in classifica: scegline un altro.";
-        setServerBoardStatus(msg, "error");
-        return { ok: false, duplicate: true };
+        setServerBoardStatus(
+          "Backend con regole vecchie: nome duplicato rifiutato, ma la partita parte comunque.",
+          "warn"
+        );
+        return { ok: true, duplicate: false, offline: true };
       }
 
       serverApiOnline = false;
@@ -1477,13 +1479,7 @@
       document.activeElement.blur();
     }
 
-    const registration = await registerPlayerNameOnServer();
-    if (!registration.ok && registration.duplicate) {
-      if (nameInputEl && nameInputEl.isConnected) {
-        nameInputEl.focus();
-      }
-      return false;
-    }
+    await registerPlayerNameOnServer();
 
     resetGame();
     gameState = "playing";
