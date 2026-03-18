@@ -146,6 +146,13 @@
       </section>
     </main>
 
-    <script src="game.js?v=20260318a"></script>
+    <script>
+      (() => {
+        if (!window.BUDDYBOY_API_BASE) {
+          window.BUDDYBOY_API_BASE = "https://buddyboy.onrender.com";
+        }
+      })();
+    </script>
+    <script src="game.js?v=20260318b"></script>
   </body>
 </html>

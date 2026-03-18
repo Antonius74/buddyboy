@@ -47,9 +47,10 @@
   const PLAYER_ID_COOKIE = "buddyboy_player_id";
   const COOKIE_DAYS = 365;
   const API_URL_PARAM = new URLSearchParams(window.location.search).get("api");
-  const SERVER_API_BASE = (API_URL_PARAM || window.BUDDYBOY_API_BASE || "/api")
-    .replace(/\/+$/, "");
-  const SERVER_REQUEST_TIMEOUT_MS = 1800;
+  const SERVER_API_BASE = buildApiBase(
+    API_URL_PARAM || window.BUDDYBOY_API_BASE || "https://buddyboy.onrender.com"
+  );
+  const SERVER_REQUEST_TIMEOUT_MS = 12000;
   const DIFFICULTY_LEVELS = {
     1: { label: "1 - Facile", speedMul: 0.9, hpMul: 0.9, spawnMul: 0.82, scoreMul: 0.9, cooldownMul: 1.08 },
     2: { label: "2 - Standard", speedMul: 1, hpMul: 1, spawnMul: 1, scoreMul: 1, cooldownMul: 1 },
@@ -177,6 +178,22 @@
   let serverApiOnline = false;
   let serverApiRetryAt = 0;
   let cachedTopPlayer = null;
+
+  function buildApiBase(rawBase) {
+    let base = String(rawBase || "")
+      .trim()
+      .replace(/\/+$/, "");
+
+    if (!base || base === "/") {
+      return "/api";
+    }
+
+    if (/^https?:\/\//i.test(base) && !/\/api(?:\/|$)/i.test(base)) {
+      base = `${base}/api`;
+    }
+
+    return base;
+  }
 
   let lastFrame = performance.now();
 
