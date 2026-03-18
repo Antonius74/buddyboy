@@ -434,7 +434,7 @@
       serverApiRetryAt = Date.now() + 10000;
       renderTopPlayer(null);
       setServerBoardStatus(
-        "Server classifica non raggiungibile: su GitHub Pages serve un backend esterno.",
+        `Server classifica non raggiungibile su ${SERVER_API_BASE}.`,
         "warn"
       );
       return null;
@@ -480,7 +480,7 @@
       serverApiOnline = false;
       serverApiRetryAt = Date.now() + 10000;
       setServerBoardStatus(
-        "Server non disponibile ora: avvio in locale senza controllo nomi.",
+        `Server non disponibile (${SERVER_API_BASE}): avvio locale senza salvataggio server.`,
         "warn"
       );
       return { ok: true, duplicate: false, offline: true };
@@ -509,9 +509,20 @@
       if (win) {
         setServerBoardStatus("Punteggio salvato sul server.", "ok");
       }
-    } catch {
+    } catch (error) {
       serverApiOnline = false;
       serverApiRetryAt = Date.now() + 10000;
+      if (error?.status === 409) {
+        setServerBoardStatus(
+          "Backend vecchio: punteggio rifiutato su nome duplicato. Aggiorna il server Node.",
+          "warn"
+        );
+        return;
+      }
+      setServerBoardStatus(
+        `Errore salvataggio punteggio su ${SERVER_API_BASE}.`,
+        "warn"
+      );
     }
   }
 
