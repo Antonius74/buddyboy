@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <title>NEXI IT - 8 Ore di Sopravvivenza</title>
-    <link rel="stylesheet" href="styles.css?v=20260317a" />
+    <title>Buddyboy (Escape from Work)</title>
+    <link rel="stylesheet" href="styles.css?v=20260326a" />
     <script>
       (() => {
         let lastTouchEnd = 0;
@@ -44,96 +44,91 @@
   </head>
   <body>
     <main class="app-shell">
-      <canvas id="game" aria-label="Gioco di sopravvivenza in ufficio"></canvas>
+      <canvas id="game" aria-label="Office survival game"></canvas>
 
       <section id="hud" class="hud" aria-live="polite">
         <div class="hud-card">
-          <span class="label">Energia</span>
+          <span class="label">Energy</span>
           <strong id="energy">10/10</strong>
         </div>
         <div class="hud-card">
-          <span class="label">Turno</span>
+          <span class="label">Shift</span>
           <strong id="time">09:00</strong>
         </div>
         <div class="hud-card">
-          <span class="label">Difficoltà</span>
+          <span class="label">Difficulty</span>
           <strong id="difficulty-hud">3/5</strong>
         </div>
         <div class="hud-card hud-score-card">
           <canvas id="player-portrait" class="player-portrait" width="64" height="64" aria-hidden="true"></canvas>
           <div class="score-stack">
-            <span id="player-name-hud" class="label">Giocatore</span>
+            <span id="player-name-hud" class="label">Player</span>
             <strong id="score">0</strong>
           </div>
         </div>
       </section>
 
-      <button id="music-toggle" class="music-toggle" type="button">MUSICA: OFF</button>
-      <button id="weapon-toggle" class="weapon-toggle" type="button">ARMA: MAIL</button>
+      <button id="music-toggle" class="music-toggle" type="button">MUSIC: OFF</button>
+      <button id="weapon-toggle" class="weapon-toggle" type="button">WEAPON: MAIL</button>
 
       <section id="state-overlay" class="state-overlay visible">
         <div class="panel">
-          <p class="kicker">Satira ufficio IT</p>
-          <h1>NEXI RUNNER: SHIFT MODE</h1>
+          <p class="kicker">Office Satire</p>
+          <h1>BUDDYBOY (ESCAPE FROM WORK)</h1>
           <p>
-            Fuggi in orizzontale fino alla fine del quadro: da 09:00 a 17:00.
-            Energia iniziale 10, ogni impatto toglie 1.
+            Run horizontally from 09:00 to 17:00.
+            You start with 10 energy, each hit removes 1.
           </p>
           <p>
-            Nemici: capi cattivi, colleghi sgambetto, videocall infinite,
-            nuove mail, war room in produzione, attacchi hacker,
-            budget, commerciali e clienti.
+            Enemies: bad bosses, tripping coworkers, endless video calls,
+            incoming emails, production war rooms, hacker attacks,
+            budgets and clients.
           </p>
-          <div class="server-board">
-            <p class="server-board-title">Classifica Server</p>
-            <p id="server-leaderboard-top" class="server-board-top">Caricamento classifica...</p>
-            <p id="server-leaderboard-status" class="server-board-status">Classifica server attiva: nomi uguali consentiti.</p>
-          </div>
-          <p>Finale quadro: compare il BIG BOSS (gigante) e devi abbatterlo per completare il turno.</p>
-          <p>Elimina i nemici sparando MAIL o RIUNIONI: ogni eliminazione vale punti.</p>
+          <p>Final stage: the giant BIG BOSS appears and you must defeat it to complete the shift.</p>
+          <p>Eliminate enemies by shooting MAIL or MEETINGS: every takedown gives points.</p>
           <div class="setup-wrap">
-            <label for="player-name-input">Nome personaggio</label>
+            <label for="player-name-input">Character name</label>
             <input id="player-name-input" type="text" maxlength="18" value="Alex" />
             <div class="gender-pick">
-              <button id="gender-male-btn" class="gender-btn active" data-gender="male" type="button">Uomo</button>
-              <button id="gender-female-btn" class="gender-btn" data-gender="female" type="button">Donna</button>
+              <button id="gender-male-btn" class="gender-btn active" data-gender="male" type="button">Man</button>
+              <button id="gender-female-btn" class="gender-btn" data-gender="female" type="button">Woman</button>
             </div>
-            <label for="difficulty-select" class="difficulty-label">Difficoltà (1-5)</label>
+            <label for="difficulty-select" class="difficulty-label">Difficulty (1-5)</label>
             <select id="difficulty-select">
-              <option value="1">1 - Facile</option>
+              <option value="1">1 - Easy</option>
               <option value="2">2 - Standard</option>
-              <option value="3" selected>3 - Intensa</option>
+              <option value="3" selected>3 - Intense</option>
               <option value="4">4 - Hardcore</option>
               <option value="5">5 - Nightmare</option>
             </select>
 
             <div class="enemy-rename-wrap">
-              <p class="enemy-rename-title">Nomi avversari (modificabili)</p>
+              <p class="enemy-rename-title">Enemy names (editable)</p>
               <div class="enemy-grid">
-                <label for="enemy-boss-input">Capo</label>
-                <input id="enemy-boss-input" type="text" maxlength="24" value="CAPO" />
+                <label for="enemy-boss-input">Boss</label>
+                <input id="enemy-boss-input" type="text" maxlength="24" value="BOSS" />
 
-                <label for="enemy-bigboss-input">Grande capo</label>
+                <label for="enemy-bigboss-input">Big boss</label>
                 <input id="enemy-bigboss-input" type="text" maxlength="24" value="BIG BOSS" />
 
-                <label for="enemy-colleague-1-input">Collega 1</label>
-                <input id="enemy-colleague-1-input" type="text" maxlength="24" value="COLLEGA 1" />
+                <label for="enemy-colleague-1-input">Coworker 1</label>
+                <input id="enemy-colleague-1-input" type="text" maxlength="24" value="COWORKER 1" />
 
-                <label for="enemy-colleague-2-input">Collega 2</label>
-                <input id="enemy-colleague-2-input" type="text" maxlength="24" value="COLLEGA 2" />
+                <label for="enemy-colleague-2-input">Coworker 2</label>
+                <input id="enemy-colleague-2-input" type="text" maxlength="24" value="COWORKER 2" />
 
-                <label for="enemy-colleague-3-input">Collega 3</label>
-                <input id="enemy-colleague-3-input" type="text" maxlength="24" value="COLLEGA 3" />
+                <label for="enemy-colleague-3-input">Coworker 3</label>
+                <input id="enemy-colleague-3-input" type="text" maxlength="24" value="COWORKER 3" />
 
-                <label for="enemy-client-input">Clienti</label>
-                <input id="enemy-client-input" type="text" maxlength="24" value="CLIENTI" />
+                <label for="enemy-client-input">Clients</label>
+                <input id="enemy-client-input" type="text" maxlength="24" value="CLIENTS" />
               </div>
             </div>
           </div>
           <p class="controls">
-            Frecce: muovi/salta · Spazio/Clic: spara · Pulsante ARMA: cambia colpo · Salta su collega/capo per eliminarli · Shift: scatto
+            Arrows: move/jump · Space/Click: fire · WEAPON button: swap shot · Jump on coworker/boss to defeat · Shift: dash
           </p>
-          <button id="start-btn" type="button">Inizia il turno</button>
+          <button id="start-btn" type="button">Start Shift</button>
         </div>
       </section>
 
@@ -141,11 +136,11 @@
         <div id="touch-pad" class="touch-pad">
           <div id="touch-knob" class="touch-knob"></div>
         </div>
-        <button id="touch-jump" type="button" class="touch-jump">SALTA</button>
-        <button id="touch-attack" type="button" class="touch-attack">SPARA</button>
+        <button id="touch-jump" type="button" class="touch-jump">JUMP</button>
+        <button id="touch-attack" type="button" class="touch-attack">FIRE</button>
       </section>
     </main>
 
-    <script src="game.js?v=20260326a"></script>
+    <script src="game.js?v=20260326b"></script>
   </body>
 </html>

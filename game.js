@@ -16,8 +16,6 @@
   const panel = overlay.querySelector(".panel");
   const nameInputEl = document.getElementById("player-name-input");
   const difficultySelectEl = document.getElementById("difficulty-select");
-  const serverLeaderboardTopEl = document.getElementById("server-leaderboard-top");
-  const serverLeaderboardStatusEl = document.getElementById("server-leaderboard-status");
   const genderMaleBtn = document.getElementById("gender-male-btn");
   const genderFemaleBtn = document.getElementById("gender-female-btn");
   const enemyLabelInputs = {
@@ -44,17 +42,11 @@
   const GRAVITY = 1650;
   const MUSIC_FILE = "assets/buggyboy-amiga500.ogg";
   const PLAYER_NAME_COOKIE = "buddyboy_player_name";
-  const PLAYER_ID_COOKIE = "buddyboy_player_id";
   const COOKIE_DAYS = 365;
-  const API_URL_PARAM = new URLSearchParams(window.location.search).get("api");
-  const SERVER_API_BASE = buildApiBase(
-    API_URL_PARAM || window.BUDDYBOY_API_BASE || "/api"
-  );
-  const SERVER_REQUEST_TIMEOUT_MS = 12000;
   const DIFFICULTY_LEVELS = {
-    1: { label: "1 - Facile", speedMul: 0.9, hpMul: 0.9, spawnMul: 0.82, scoreMul: 0.9, cooldownMul: 1.08 },
+    1: { label: "1 - Easy", speedMul: 0.9, hpMul: 0.9, spawnMul: 0.82, scoreMul: 0.9, cooldownMul: 1.08 },
     2: { label: "2 - Standard", speedMul: 1, hpMul: 1, spawnMul: 1, scoreMul: 1, cooldownMul: 1 },
-    3: { label: "3 - Intensa", speedMul: 1.12, hpMul: 1.12, spawnMul: 1.12, scoreMul: 1.12, cooldownMul: 0.94 },
+    3: { label: "3 - Intense", speedMul: 1.12, hpMul: 1.12, spawnMul: 1.12, scoreMul: 1.12, cooldownMul: 0.94 },
     4: { label: "4 - Hardcore", speedMul: 1.24, hpMul: 1.24, spawnMul: 1.28, scoreMul: 1.28, cooldownMul: 0.88 },
     5: { label: "5 - Nightmare", speedMul: 1.38, hpMul: 1.38, spawnMul: 1.45, scoreMul: 1.45, cooldownMul: 0.8 },
   };
@@ -98,11 +90,11 @@
   const CHIP_ARP_STEPS = [0, 4, 7, 12, 7, 4];
 
   const ENEMY_RULES = {
-    boss: { w: 52, h: 82, speed: 72, hp: 3, points: 320, label: "CAPO" },
+    boss: { w: 52, h: 82, speed: 72, hp: 3, points: 320, label: "BOSS" },
     bigBoss: { w: 156, h: 246, speed: 78, hp: 30, points: 4200, label: "BIG BOSS" },
-    colleague: { w: 46, h: 76, speed: 108, hp: 2, points: 160, label: "COLLEGA" },
-    commercial: { w: 48, h: 78, speed: 124, hp: 2, points: 210, label: "COMMERCIALI" },
-    client: { w: 46, h: 74, speed: 96, hp: 2, points: 190, label: "CLIENTI" },
+    colleague: { w: 46, h: 76, speed: 108, hp: 2, points: 160, label: "COWORKER" },
+    commercial: { w: 48, h: 78, speed: 124, hp: 2, points: 210, label: "COWORKER" },
+    client: { w: 46, h: 74, speed: 96, hp: 2, points: 190, label: "CLIENTS" },
     meeting: { w: 70, h: 58, speed: 58, hp: 2, points: 220, label: "MEETING 100+" },
     mail: { w: 42, h: 28, speed: 135, hp: 1, points: 90, label: "MAIL", airborne: true },
     hacker: { w: 48, h: 78, speed: 84, hp: 2, points: 260, label: "HACKER" },
@@ -110,9 +102,9 @@
     warroom: { w: 76, h: 70, speed: 0, hp: 2, points: 260, label: "WAR ROOM", hazard: true },
   };
   const ENEMY_LABEL_FALLBACKS = {
-    colleague1: "COLLEGA 1",
-    colleague2: "COLLEGA 2",
-    colleague3: "COLLEGA 3",
+    colleague1: "COWORKER 1",
+    colleague2: "COWORKER 2",
+    colleague3: "COWORKER 3",
   };
   const enemyLabelProfile = {};
   for (const type in ENEMY_RULES) {
@@ -131,7 +123,7 @@
 
   const PLAYER_FIRE_MODES = {
     mailShot: { label: "MAIL", cooldown: 0.2, speed: 560, rise: -90, damage: 1 },
-    meetingShot: { label: "RIUNIONE", cooldown: 0.34, speed: 410, rise: -180, damage: 2 },
+    meetingShot: { label: "MEETING", cooldown: 0.34, speed: 410, rise: -180, damage: 2 },
   };
 
   const PLAYER_LOOKS = {
@@ -170,30 +162,10 @@
   let finalBossDefeated = false;
   let finalBossNoticeCooldown = 0;
   const playerProfile = {
-    name: "Antz",
+    name: "Alex",
     gender: "male",
   };
   let difficultyLevel = 3;
-  let playerServerId = "";
-  let serverApiOnline = false;
-  let serverApiRetryAt = 0;
-  let cachedTopPlayer = null;
-
-  function buildApiBase(rawBase) {
-    let base = String(rawBase || "")
-      .trim()
-      .replace(/\/+$/, "");
-
-    if (!base || base === "/") {
-      return "/api";
-    }
-
-    if (/^https?:\/\//i.test(base) && !/\/api(?:\/|$)/i.test(base)) {
-      base = `${base}/api`;
-    }
-
-    return base;
-  }
 
   let lastFrame = performance.now();
 
@@ -306,23 +278,6 @@
     document.cookie = `${name}=${encoded}; expires=${expires}; path=/; SameSite=Lax`;
   }
 
-  function createPlayerId() {
-    if (window.crypto && typeof window.crypto.randomUUID === "function") {
-      return window.crypto.randomUUID();
-    }
-    const rand = Math.random().toString(36).slice(2, 11);
-    return `p-${Date.now().toString(36)}-${rand}`;
-  }
-
-  function ensurePlayerServerId() {
-    const existing = readCookie(PLAYER_ID_COOKIE).trim();
-    if (existing) return existing;
-
-    const created = createPlayerId();
-    writeCookie(PLAYER_ID_COOKIE, created);
-    return created;
-  }
-
   function rememberPlayerName() {
     const safeName = sanitizePlayerName(playerProfile.name);
     playerProfile.name = safeName;
@@ -358,190 +313,6 @@
   function applyDifficultyFromSetup() {
     const selected = difficultySelectEl ? difficultySelectEl.value : difficultyLevel;
     setDifficultyLevel(selected);
-  }
-
-  function getTopPlayerText(topPlayer) {
-    if (!topPlayer || !topPlayer.name) {
-      return "Nessun record server disponibile.";
-    }
-
-    const topName = sanitizePlayerName(topPlayer.name, "Player");
-    const topScore = Number.isFinite(topPlayer.bestScore) ? Math.max(0, Math.round(topPlayer.bestScore)) : 0;
-    const topDifficulty = clamp(
-      Number.parseInt(topPlayer.bestDifficulty, 10) || 1,
-      1,
-      5
-    );
-    return `${topName} • ${topScore} pt • Difficolta ${topDifficulty}/5`;
-  }
-
-  function setServerBoardStatus(message, tone = "info") {
-    if (!serverLeaderboardStatusEl || !serverLeaderboardStatusEl.isConnected) return;
-
-    const colorMap = {
-      info: "#b7e9ff",
-      ok: "#8df3bf",
-      warn: "#ffd8a3",
-      error: "#ff9f8e",
-    };
-
-    serverLeaderboardStatusEl.textContent = message;
-    serverLeaderboardStatusEl.style.color = colorMap[tone] || colorMap.info;
-  }
-
-  function renderTopPlayer(topPlayer) {
-    cachedTopPlayer = topPlayer || null;
-    if (!serverLeaderboardTopEl || !serverLeaderboardTopEl.isConnected) return;
-    serverLeaderboardTopEl.textContent = getTopPlayerText(cachedTopPlayer);
-  }
-
-  async function fetchJsonWithTimeout(url, options = {}) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), SERVER_REQUEST_TIMEOUT_MS);
-
-    try {
-      const requestOptions = { ...options, signal: controller.signal };
-      requestOptions.headers = {
-        Accept: "application/json",
-        ...(options.body ? { "Content-Type": "application/json" } : {}),
-        ...(options.headers || {}),
-      };
-
-      const response = await fetch(url, requestOptions);
-      let payload = null;
-      try {
-        payload = await response.json();
-      } catch {
-        payload = null;
-      }
-
-      if (!response.ok) {
-        const message =
-          (payload && (payload.error || payload.message)) ||
-          `Errore API (${response.status})`;
-        const error = new Error(message);
-        error.status = response.status;
-        error.payload = payload;
-        throw error;
-      }
-
-      return payload || {};
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  }
-
-  async function refreshServerLeaderboard() {
-    if (!serverLeaderboardTopEl || !serverLeaderboardStatusEl) return null;
-
-    setServerBoardStatus("Caricamento classifica server...", "info");
-
-    try {
-      const data = await fetchJsonWithTimeout(`${SERVER_API_BASE}/leaderboard`, {
-        method: "GET",
-        cache: "no-store",
-      });
-      serverApiOnline = true;
-      serverApiRetryAt = 0;
-      renderTopPlayer(data.topPlayer || null);
-      setServerBoardStatus("Server online: classifica attiva (nomi uguali consentiti).", "ok");
-      return data;
-    } catch (error) {
-      serverApiOnline = false;
-      serverApiRetryAt = Date.now() + 10000;
-      renderTopPlayer(null);
-      const reason = error?.message ? ` (${error.message})` : "";
-      setServerBoardStatus(
-        `Server classifica non raggiungibile su ${SERVER_API_BASE}${reason}.`,
-        "warn"
-      );
-      return null;
-    }
-  }
-
-  async function registerPlayerNameOnServer() {
-    if (Date.now() < serverApiRetryAt) {
-      return { ok: true, duplicate: false, offline: true };
-    }
-
-    const payload = {
-      name: sanitizePlayerName(playerProfile.name),
-      playerId: playerServerId,
-    };
-
-    try {
-      const data = await fetchJsonWithTimeout(`${SERVER_API_BASE}/register`, {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-
-      serverApiOnline = true;
-      serverApiRetryAt = 0;
-      const canonicalName = sanitizePlayerName(data.player?.name || payload.name);
-      playerProfile.name = canonicalName;
-      if (nameInputEl) {
-        nameInputEl.value = canonicalName;
-      }
-      renderTopPlayer(data.topPlayer || cachedTopPlayer);
-      setServerBoardStatus("Nome registrato sul server.", "ok");
-      rememberPlayerName();
-      return { ok: true, duplicate: false };
-    } catch (error) {
-      if (error.status === 409) {
-        setServerBoardStatus(
-          "Backend con regole vecchie: nome duplicato rifiutato, ma la partita parte comunque.",
-          "warn"
-        );
-        return { ok: true, duplicate: false, offline: true };
-      }
-
-      serverApiOnline = false;
-      serverApiRetryAt = Date.now() + 10000;
-      setServerBoardStatus(
-        `Server non disponibile (${SERVER_API_BASE}): avvio locale senza salvataggio server.`,
-        "warn"
-      );
-      return { ok: true, duplicate: false, offline: true };
-    }
-  }
-
-  async function submitScoreOnServer(win) {
-    if (!playerServerId) return;
-    if (Date.now() < serverApiRetryAt) return;
-
-    try {
-      const data = await fetchJsonWithTimeout(`${SERVER_API_BASE}/score`, {
-        method: "POST",
-        body: JSON.stringify({
-          playerId: playerServerId,
-          name: playerProfile.name,
-          score,
-          difficulty: difficultyLevel,
-          won: Boolean(win),
-        }),
-      });
-
-      serverApiOnline = true;
-      serverApiRetryAt = 0;
-      renderTopPlayer(data.topPlayer || cachedTopPlayer);
-      if (win) {
-        setServerBoardStatus("Punteggio salvato sul server.", "ok");
-      }
-    } catch (error) {
-      serverApiOnline = false;
-      serverApiRetryAt = Date.now() + 10000;
-      if (error?.status === 409) {
-        setServerBoardStatus(
-          "Backend vecchio: punteggio rifiutato su nome duplicato. Aggiorna il server Node.",
-          "warn"
-        );
-        return;
-      }
-      setServerBoardStatus(
-        `Errore salvataggio punteggio su ${SERVER_API_BASE}.`,
-        "warn"
-      );
-    }
   }
 
   function getPlayerLook() {
@@ -598,7 +369,7 @@
 
   function pickColleagueName() {
     const pool = getColleagueNamePool();
-    if (!pool.length) return "COLLEGA";
+    if (!pool.length) return "COWORKER";
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
@@ -768,14 +539,14 @@
   function updateMusicButton() {
     if (!musicToggleBtn) return;
 
-    const label = musicState.enabled ? "MUSICA: ON" : "MUSICA: OFF";
+    const label = musicState.enabled ? "MUSIC: ON" : "MUSIC: OFF";
     musicToggleBtn.textContent = label;
   }
 
   function updateWeaponButton() {
     if (!weaponToggleBtn) return;
     const mode = PLAYER_FIRE_MODES[playerFireMode];
-    weaponToggleBtn.textContent = `ARMA: ${mode?.label || "MAIL"}`;
+    weaponToggleBtn.textContent = `WEAPON: ${mode?.label || "MAIL"}`;
   }
 
   function initMusicSystem() {
@@ -1041,7 +812,7 @@
     ];
 
     const signs = [
-      { x: startX + 250, y: groundY - 300, text: "Nexi Payments" },
+      { x: startX + 250, y: groundY - 300, text: "Acme Computer Co." },
     ];
     const windows = [];
     const lamps = [];
@@ -1501,14 +1272,9 @@
   async function startGame() {
     applyProfileFromSetup();
     rememberPlayerName();
-    if (!playerServerId) {
-      playerServerId = ensurePlayerServerId();
-    }
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
-
-    await registerPlayerNameOnServer();
 
     resetGame();
     gameState = "playing";
@@ -1547,7 +1313,6 @@
   function finishGame(win) {
     gameState = win ? "won" : "lost";
     document.body.classList.remove("playing-mode");
-    void submitScoreOnServer(win);
 
     if (win) {
       playSfxWinJingle();
@@ -1555,20 +1320,20 @@
       playSfxPlayerDeath();
     }
 
-    const title = win ? "Fine Quadro" : "Game Over";
+    const title = win ? "Shift Complete" : "Game Over";
     const subtitle = win
-      ? "Hai completato la fuga, sono le 18!!"
-      : "Energia esaurita prima del traguardo del quadro.";
+      ? "You escaped the office grind and reached the end of the shift."
+      : "You ran out of energy before the end of the shift.";
 
     panel.innerHTML = `
-      <p class="kicker">Arcade ufficio IT</p>
+      <p class="kicker">Office Arcade</p>
       <h1>${title}</h1>
-      <p>Giocatore: <strong>${playerProfile.name}</strong></p>
+      <p>Player: <strong>${playerProfile.name}</strong></p>
       <p>${subtitle}</p>
-      <p>Difficolta: <strong>${difficultyLevel}/5</strong></p>
-      <p>Punti totali: <strong>${score}</strong></p>
-      <p class="controls">Premi il pulsante per ripartire.</p>
-      <button id="start-btn" type="button">${win ? "Nuovo quadro" : "Riprova"}</button>
+      <p>Difficulty: <strong>${difficultyLevel}/5</strong></p>
+      <p>Total score: <strong>${score}</strong></p>
+      <p class="controls">Press the button to play again.</p>
+      <button id="start-btn" type="button">${win ? "New Shift" : "Retry"}</button>
     `;
 
     const button = document.getElementById("start-btn");
@@ -1608,7 +1373,7 @@
             y: player.y - 24,
             vy: -18,
             ttl: 1.1,
-            text: "Abbatti il BIG BOSS!",
+            text: "Defeat the BIG BOSS!",
             color: "#ffd2c4",
           });
           finalBossNoticeCooldown = 1;
@@ -2894,7 +2659,7 @@
     ctx.font = "800 20px Impact, Haettenschweiler, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("FINE TURNO 17:00", x + 57, level.groundY - 266);
+    ctx.fillText("SHIFT END 17:00", x + 57, level.groundY - 266);
   }
 
   function drawPlayer() {
@@ -3616,7 +3381,7 @@
 
     ctx.textAlign = "center";
     ctx.fillText(
-      `FUGA ORIZZONTALE - ARMA: ${PLAYER_FIRE_MODES[playerFireMode].label}`,
+      `HORIZONTAL ESCAPE - WEAPON: ${PLAYER_FIRE_MODES[playerFireMode].label}`,
       x + panelW * 0.5,
       y + 16
     );
@@ -4054,7 +3819,6 @@
   }
 
   loadRememberedPlayerName();
-  playerServerId = ensurePlayerServerId();
   setDifficultyLevel(difficultySelectEl ? difficultySelectEl.value : difficultyLevel);
   rememberPlayerName();
 
@@ -4068,6 +3832,5 @@
   initMusicSystem();
   resize();
   updateHud();
-  void refreshServerLeaderboard();
   requestAnimationFrame(gameLoop);
 })();

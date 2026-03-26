@@ -261,36 +261,6 @@ body.playing-mode .touch-ui * {
   font-size: clamp(0.96rem, 2.3vw, 1.1rem);
 }
 
-.server-board {
-  margin: 10px auto 12px;
-  padding: 10px;
-  border: 1px solid rgba(145, 228, 255, 0.28);
-  border-radius: 12px;
-  background: rgba(8, 33, 48, 0.6);
-  text-align: left;
-}
-
-.server-board-title {
-  margin: 0 0 4px;
-  color: #9ce8ff;
-  font-size: 0.82rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.server-board-top {
-  margin: 0 0 4px;
-  color: #ffee9b;
-  font-weight: 700;
-  font-size: 0.98rem;
-}
-
-.server-board-status {
-  margin: 0;
-  color: #b7e9ff;
-  font-size: 0.84rem;
-}
-
 .panel .controls {
   color: var(--accent);
   font-weight: 700;
