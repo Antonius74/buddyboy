@@ -811,9 +811,16 @@
       { x: -200, y: groundY, w: width + 700, h: 380, kind: "ground", solid: true },
     ];
 
-    const signs = [
-      { x: startX + 250, y: groundY - 300, text: "Acme Computer Co." },
-    ];
+    const signs = [];
+    const companyName = "Acme Software Co.";
+    for (let step = 0; step <= 5; step += 1) {
+      const progressRatio = step * 0.2;
+      signs.push({
+        x: startX + 250 + (finishX - startX) * progressRatio,
+        y: groundY - 300 + (step % 2 === 0 ? 0 : 4),
+        text: companyName,
+      });
+    }
     const windows = [];
     const lamps = [];
     const columns = [];
@@ -2265,112 +2272,63 @@
       const w = windowFrame.w;
       const h = windowFrame.h;
 
-      // Back panel where the in-store POS is mounted.
+      // Office workstation scene with computers.
       ctx.fillStyle = "rgba(31, 79, 105, 0.46)";
       ctx.fillRect(x - 10, y - 10, w + 20, h + 20);
 
-      const centerX = x + w * 0.5;
-      const termW = Math.min(136, w * 0.62);
-      const termH = Math.min(92, h * 0.72);
-      const termX = centerX - termW * 0.5;
-      const termY = y + h * 0.2;
-      const standTopY = termY + termH + 2;
-      const baseY = standTopY + 22;
+      const deskY = y + h * 0.74;
+      ctx.fillStyle = "#3f647c";
+      ctx.fillRect(x + 12, deskY, w - 24, 12);
+      ctx.fillStyle = "#284659";
+      ctx.fillRect(x + 16, deskY + 12, w - 32, 7);
 
-      // Soft shadow on wall.
-      ctx.fillStyle = "rgba(7, 18, 28, 0.35)";
-      ctx.beginPath();
-      ctx.ellipse(centerX + 5, termY + termH * 0.65, termW * 0.56, termH * 0.5, -0.12, 0, Math.PI * 2);
-      ctx.fill();
+      const monitorW = Math.min(74, w * 0.34);
+      const monitorH = Math.min(44, h * 0.37);
+      const gap = 12;
+      const startMonitorX = x + (w - (monitorW * 2 + gap)) * 0.5;
 
-      // Receipt strip on top.
-      ctx.fillStyle = "#f2f8fc";
-      ctx.fillRect(termX + termW * 0.6, termY - 13, termW * 0.24, 13);
-      ctx.fillStyle = "#d8e6ef";
-      ctx.fillRect(termX + termW * 0.62, termY - 8, termW * 0.2, 2);
+      for (let i = 0; i < 2; i += 1) {
+        const mx = startMonitorX + i * (monitorW + gap);
+        const my = y + h * 0.28 + (i === 0 ? 0 : 2);
 
-      // Terminal body in perspective.
-      const shellGrad = ctx.createLinearGradient(termX, termY, termX, termY + termH);
-      shellGrad.addColorStop(0, "#97b2c4");
-      shellGrad.addColorStop(0.55, "#6f8da1");
-      shellGrad.addColorStop(1, "#49657a");
-      ctx.fillStyle = shellGrad;
-      ctx.beginPath();
-      ctx.moveTo(termX + 10, termY + 8);
-      ctx.lineTo(termX + termW - 2, termY + 2);
-      ctx.lineTo(termX + termW - 14, termY + termH - 8);
-      ctx.lineTo(termX + 2, termY + termH);
-      ctx.closePath();
-      ctx.fill();
+        const frameGrad = ctx.createLinearGradient(mx, my, mx, my + monitorH);
+        frameGrad.addColorStop(0, "#8ca8bb");
+        frameGrad.addColorStop(1, "#516b7d");
+        ctx.fillStyle = frameGrad;
+        ctx.fillRect(mx, my, monitorW, monitorH);
 
-      ctx.strokeStyle = "#253f51";
-      ctx.lineWidth = 3;
-      ctx.stroke();
+        ctx.fillStyle = "#162838";
+        ctx.fillRect(mx + 4, my + 4, monitorW - 8, monitorH - 10);
+        ctx.fillStyle = "#79c6dd";
+        ctx.fillRect(mx + 6, my + 7, monitorW - 12, monitorH - 16);
+        ctx.fillStyle = "rgba(255,255,255,0.22)";
+        ctx.fillRect(mx + 8, my + 9, monitorW * 0.45, 3);
 
-      // Screen.
-      const screenX = termX + termW * 0.08;
-      const screenY = termY + termH * 0.12;
-      const screenW = termW * 0.52;
-      const screenH = termH * 0.24;
-      ctx.fillStyle = "#152737";
-      ctx.fillRect(screenX, screenY, screenW, screenH);
-      ctx.fillStyle = "#81cad7";
-      ctx.fillRect(screenX + 3, screenY + 3, screenW - 6, screenH - 6);
-      ctx.fillStyle = "rgba(255,255,255,0.22)";
-      ctx.fillRect(screenX + 6, screenY + 5, screenW * 0.46, 4);
-
-      // Card slot + inserted card.
-      const slotX = termX + termW * 0.63;
-      const slotY = termY + termH * 0.28;
-      const slotW = termW * 0.24;
-      ctx.fillStyle = "#1a2c3b";
-      ctx.fillRect(slotX, slotY, slotW, 6);
-      ctx.fillStyle = "#d9eef9";
-      ctx.fillRect(slotX + slotW * 0.46, slotY - 8, slotW * 0.46, 8);
-      ctx.fillStyle = "#67bde3";
-      ctx.fillRect(slotX + slotW * 0.52, slotY - 6, slotW * 0.28, 3);
-
-      // Keypad.
-      const padX = termX + termW * 0.1;
-      const padY = termY + termH * 0.46;
-      const keyW = Math.max(7, Math.floor(termW * 0.095));
-      const keyH = Math.max(7, Math.floor(termH * 0.105));
-      const gap = 4;
-      for (let row = 0; row < 4; row += 1) {
-        for (let col = 0; col < 3; col += 1) {
-          const kx = padX + col * (keyW + gap);
-          const ky = padY + row * (keyH + gap);
-          ctx.fillStyle = "#1f3548";
-          ctx.fillRect(kx, ky, keyW, keyH);
-          ctx.fillStyle = "rgba(183, 226, 244, 0.72)";
-          ctx.fillRect(kx + 2, ky + 2, keyW - 4, 2);
-        }
+        ctx.fillStyle = "#344f63";
+        ctx.fillRect(mx + monitorW * 0.5 - 3, my + monitorH, 6, 12);
+        ctx.fillStyle = "#2a4356";
+        ctx.fillRect(mx + monitorW * 0.5 - 13, my + monitorH + 11, 26, 4);
       }
 
-      // Contactless icon.
-      const nfcX = termX + termW * 0.78;
-      const nfcY = termY + termH * 0.61;
-      ctx.strokeStyle = "#d4f8ff";
-      ctx.lineWidth = 2;
-      for (let i = 0; i < 3; i += 1) {
-        ctx.beginPath();
-        ctx.arc(nfcX, nfcY, 5 + i * 4, -Math.PI * 0.36, Math.PI * 0.36);
-        ctx.stroke();
+      // Keyboard and mouse on desk.
+      ctx.fillStyle = "#9fb5c3";
+      ctx.fillRect(x + w * 0.35, deskY + 2, w * 0.26, 5);
+      ctx.fillStyle = "#6f899a";
+      for (let k = 0; k < 6; k += 1) {
+        ctx.fillRect(x + w * 0.36 + k * 6, deskY + 3, 3, 2);
       }
+      ctx.fillStyle = "#b8ccd7";
+      ctx.fillRect(x + w * 0.64, deskY + 2, 8, 5);
 
-      // Stand and desk base.
-      ctx.fillStyle = "#3f5e72";
-      ctx.fillRect(centerX - 7, standTopY, 14, 22);
-      ctx.fillStyle = "#2e4b5f";
-      ctx.fillRect(centerX - 36, baseY, 72, 8);
-      ctx.fillStyle = "rgba(0,0,0,0.22)";
-      ctx.fillRect(centerX - 40, baseY + 7, 80, 4);
-
-      ctx.fillStyle = "#e9f8ff";
-      ctx.font = "700 9px Trebuchet MS, sans-serif";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-      ctx.fillText("STORE POS", termX + 8, termY + termH - 9);
+      // PC tower.
+      const towerX = x + w - 34;
+      const towerY = deskY - 25;
+      ctx.fillStyle = "#4f6678";
+      ctx.fillRect(towerX, towerY, 20, 30);
+      ctx.fillStyle = "#9edaff";
+      ctx.fillRect(towerX + 5, towerY + 6, 10, 3);
+      ctx.fillStyle = "#77f5b2";
+      ctx.fillRect(towerX + 8, towerY + 14, 4, 4);
     }
 
     for (const lamp of level.lamps) {
@@ -2634,10 +2592,15 @@
       ctx.strokeRect(sign.x - 110, sign.y - 24, 220, 48);
 
       ctx.fillStyle = "#7de6ff";
-      ctx.font = "900 30px Impact, Haettenschweiler, sans-serif";
+      let fontSize = 30;
+      const maxTextWidth = 200;
+      do {
+        ctx.font = `900 ${fontSize}px Impact, Haettenschweiler, sans-serif`;
+        fontSize -= 1;
+      } while (fontSize > 15 && ctx.measureText(sign.text).width > maxTextWidth);
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(sign.text, sign.x, sign.y + 1);
+      ctx.fillText(sign.text, sign.x, sign.y + 2);
     }
   }
 
