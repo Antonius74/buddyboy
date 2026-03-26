@@ -48,7 +48,7 @@
   const COOKIE_DAYS = 365;
   const API_URL_PARAM = new URLSearchParams(window.location.search).get("api");
   const SERVER_API_BASE = buildApiBase(
-    API_URL_PARAM || window.BUDDYBOY_API_BASE || "https://buddyboy.onrender.com"
+    API_URL_PARAM || window.BUDDYBOY_API_BASE || "/api"
   );
   const SERVER_REQUEST_TIMEOUT_MS = 12000;
   const DIFFICULTY_LEVELS = {
@@ -450,8 +450,9 @@
       serverApiOnline = false;
       serverApiRetryAt = Date.now() + 10000;
       renderTopPlayer(null);
+      const reason = error?.message ? ` (${error.message})` : "";
       setServerBoardStatus(
-        `Server classifica non raggiungibile su ${SERVER_API_BASE}.`,
+        `Server classifica non raggiungibile su ${SERVER_API_BASE}${reason}.`,
         "warn"
       );
       return null;
