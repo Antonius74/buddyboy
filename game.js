@@ -2272,63 +2272,70 @@
       const w = windowFrame.w;
       const h = windowFrame.h;
 
-      // Office workstation scene with computers.
+      // Office desktop PC scene.
       ctx.fillStyle = "rgba(31, 79, 105, 0.46)";
       ctx.fillRect(x - 10, y - 10, w + 20, h + 20);
 
-      const deskY = y + h * 0.74;
+      const deskY = y + h * 0.72;
       ctx.fillStyle = "#3f647c";
       ctx.fillRect(x + 12, deskY, w - 24, 12);
       ctx.fillStyle = "#284659";
       ctx.fillRect(x + 16, deskY + 12, w - 32, 7);
 
-      const monitorW = Math.min(74, w * 0.34);
-      const monitorH = Math.min(44, h * 0.37);
-      const gap = 12;
-      const startMonitorX = x + (w - (monitorW * 2 + gap)) * 0.5;
+      const monitorW = Math.min(98, w * 0.5);
+      const monitorH = Math.min(56, h * 0.44);
+      const monitorX = x + w * 0.5 - monitorW * 0.5 - 10;
+      const monitorY = y + h * 0.24;
+      const monitorGrad = ctx.createLinearGradient(monitorX, monitorY, monitorX, monitorY + monitorH);
+      monitorGrad.addColorStop(0, "#92adc0");
+      monitorGrad.addColorStop(1, "#546f82");
+      ctx.fillStyle = monitorGrad;
+      ctx.fillRect(monitorX, monitorY, monitorW, monitorH);
 
-      for (let i = 0; i < 2; i += 1) {
-        const mx = startMonitorX + i * (monitorW + gap);
-        const my = y + h * 0.28 + (i === 0 ? 0 : 2);
+      ctx.fillStyle = "#132433";
+      ctx.fillRect(monitorX + 4, monitorY + 4, monitorW - 8, monitorH - 10);
+      ctx.fillStyle = "#7dcde3";
+      ctx.fillRect(monitorX + 7, monitorY + 8, monitorW - 14, monitorH - 17);
+      ctx.fillStyle = "rgba(255,255,255,0.24)";
+      ctx.fillRect(monitorX + 10, monitorY + 10, monitorW * 0.38, 3);
 
-        const frameGrad = ctx.createLinearGradient(mx, my, mx, my + monitorH);
-        frameGrad.addColorStop(0, "#8ca8bb");
-        frameGrad.addColorStop(1, "#516b7d");
-        ctx.fillStyle = frameGrad;
-        ctx.fillRect(mx, my, monitorW, monitorH);
+      ctx.fillStyle = "#334f62";
+      ctx.fillRect(monitorX + monitorW * 0.5 - 4, monitorY + monitorH, 8, 13);
+      ctx.fillStyle = "#263f52";
+      ctx.fillRect(monitorX + monitorW * 0.5 - 18, monitorY + monitorH + 12, 36, 5);
 
-        ctx.fillStyle = "#162838";
-        ctx.fillRect(mx + 4, my + 4, monitorW - 8, monitorH - 10);
-        ctx.fillStyle = "#79c6dd";
-        ctx.fillRect(mx + 6, my + 7, monitorW - 12, monitorH - 16);
-        ctx.fillStyle = "rgba(255,255,255,0.22)";
-        ctx.fillRect(mx + 8, my + 9, monitorW * 0.45, 3);
-
-        ctx.fillStyle = "#344f63";
-        ctx.fillRect(mx + monitorW * 0.5 - 3, my + monitorH, 6, 12);
-        ctx.fillStyle = "#2a4356";
-        ctx.fillRect(mx + monitorW * 0.5 - 13, my + monitorH + 11, 26, 4);
-      }
-
-      // Keyboard and mouse on desk.
-      ctx.fillStyle = "#9fb5c3";
-      ctx.fillRect(x + w * 0.35, deskY + 2, w * 0.26, 5);
+      // Keyboard + mouse.
+      const keyX = monitorX + 16;
+      const keyY = deskY + 2;
+      const keyW = monitorW - 28;
+      ctx.fillStyle = "#a8bfd0";
+      ctx.fillRect(keyX, keyY, keyW, 5);
       ctx.fillStyle = "#6f899a";
-      for (let k = 0; k < 6; k += 1) {
-        ctx.fillRect(x + w * 0.36 + k * 6, deskY + 3, 3, 2);
-      }
-      ctx.fillStyle = "#b8ccd7";
-      ctx.fillRect(x + w * 0.64, deskY + 2, 8, 5);
+      ctx.fillRect(keyX + 3, keyY + 1, keyW - 6, 1);
+      ctx.fillStyle = "#86a3b6";
+      ctx.fillRect(keyX + 4, keyY + 3, keyW - 8, 1);
+
+      ctx.fillStyle = "#c6d7e2";
+      ctx.fillRect(keyX + keyW + 5, keyY + 1, 8, 5);
+      ctx.fillStyle = "#8ba2b3";
+      ctx.fillRect(keyX + keyW + 8, keyY + 2, 2, 2);
 
       // PC tower.
-      const towerX = x + w - 34;
-      const towerY = deskY - 25;
-      ctx.fillStyle = "#4f6678";
-      ctx.fillRect(towerX, towerY, 20, 30);
+      const towerW = 22;
+      const towerH = 36;
+      const towerX = x + w - 36;
+      const towerY = deskY - towerH + 4;
+      const towerGrad = ctx.createLinearGradient(towerX, towerY, towerX, towerY + towerH);
+      towerGrad.addColorStop(0, "#617a8e");
+      towerGrad.addColorStop(1, "#3e5568");
+      ctx.fillStyle = towerGrad;
+      ctx.fillRect(towerX, towerY, towerW, towerH);
+      ctx.fillStyle = "#1f3446";
+      ctx.fillRect(towerX + 5, towerY + 6, towerW - 10, 4);
       ctx.fillStyle = "#9edaff";
-      ctx.fillRect(towerX + 5, towerY + 6, 10, 3);
-      ctx.fillStyle = "#77f5b2";
-      ctx.fillRect(towerX + 8, towerY + 14, 4, 4);
+      ctx.fillRect(towerX + 7, towerY + 13, towerW - 14, 3);
+      ctx.fillStyle = "#7ff2b5";
+      ctx.fillRect(towerX + 9, towerY + 22, 4, 4);
     }
 
     for (const lamp of level.lamps) {
@@ -2576,31 +2583,41 @@
 
   function drawSigns() {
     for (const sign of level.signs) {
-      if (!isVisible(sign.x - 130, sign.y - 36, 260, 72, 120)) continue;
+      ctx.font = "900 30px Impact, Haettenschweiler, sans-serif";
+      const rawTextWidth = ctx.measureText(sign.text).width;
+      const panelWidth = clamp(rawTextWidth + 52, 230, 300);
+      const panelHeight = 52;
+      const panelX = Math.round(sign.x - panelWidth * 0.5);
+      const panelY = Math.round(sign.y - panelHeight * 0.5);
+      const shadowPad = 9;
+      const maxTextWidth = panelWidth - 24;
+
+      if (!isVisible(panelX - shadowPad, panelY - shadowPad, panelWidth + shadowPad * 2, panelHeight + shadowPad * 2, 120)) {
+        continue;
+      }
 
       ctx.fillStyle = "rgba(8, 27, 42, 0.45)";
-      ctx.fillRect(sign.x - 118, sign.y - 28, 236, 58);
+      ctx.fillRect(panelX - shadowPad, panelY - shadowPad + 2, panelWidth + shadowPad * 2, panelHeight + shadowPad + 2);
 
-      const panelGradient = ctx.createLinearGradient(sign.x - 110, sign.y - 24, sign.x - 110, sign.y + 24);
+      const panelGradient = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelHeight);
       panelGradient.addColorStop(0, "#2a7295");
       panelGradient.addColorStop(1, "#1f5773");
       ctx.fillStyle = panelGradient;
-      ctx.fillRect(sign.x - 110, sign.y - 24, 220, 48);
+      ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
 
       ctx.strokeStyle = "#89dbff";
       ctx.lineWidth = 3;
-      ctx.strokeRect(sign.x - 110, sign.y - 24, 220, 48);
+      ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
 
       ctx.fillStyle = "#7de6ff";
       let fontSize = 30;
-      const maxTextWidth = 200;
       do {
         ctx.font = `900 ${fontSize}px Impact, Haettenschweiler, sans-serif`;
         fontSize -= 1;
       } while (fontSize > 15 && ctx.measureText(sign.text).width > maxTextWidth);
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(sign.text, sign.x, sign.y + 2);
+      ctx.fillText(sign.text, Math.round(sign.x), Math.round(sign.y));
     }
   }
 
